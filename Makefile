@@ -6,15 +6,24 @@
 #
 # ------------------------------------------------
 
-all : obj/decrypt.o
-	gcc obj/decrypt.o -o bin/decrypt
+CC = gcc
+SDIR = src
+ODIR = obj
+EDIR = bin
+EXE = $(EDIR)/decrypt
+OBJECTS = $(ODIR)/decrypt.o
 
-obj/decrypt.o : src/decrypt.h src/decrypt.c
-	gcc -c src/decrypt.c -o obj/decrypt.o
+all : $(OBJECTS)
+	$(CC) -o $(EXE) $^
+
+$(ODIR)/decrypt.o : $(SDIR)/decrypt.c $(SDIR)/decrypt.h
+	$(CC) -c $< -o $@
 
 run: all
-	bin/decrypt
+	$(EXE)
 
+.PHONY: clean
+	
 clean:
-	rm obj/*.o
-	rm bin/*
+	-rm -f $(ODIR)/*.o
+	-rm -f $(EDIR)/*
