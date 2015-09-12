@@ -1,29 +1,38 @@
 # ------------------------------------------------
-# Generic Makefile
+# Makefile
 #
-# Author: gc497052684@gmail.com
-# Date  : 2015-09-11
+#     Author: Armour Guo
+#     Email : gc497052684@gmail.com
+#     Date  : 2015-09-11
 #
 # ------------------------------------------------
 
 CC = gcc
+# -Wall turns on most compiler warnings
+CFLAGS  = -Wall
+# directory for source files
 SDIR = src
+# directory for *.o files
 ODIR = obj
+# directory for executable files
 EDIR = bin
-EXE = $(EDIR)/decrypt
+TARGET = $(EDIR)/decrypt
 OBJECTS = $(ODIR)/decrypt.o
 
 all : $(OBJECTS)
-	$(CC) -o $(EXE) $^
+	@echo "--------- Generating executable file -----------"
+	$(CC) $(CFLAGS) -o $(TARGET) $^
+	@echo "--------- Compiling done! ----------------------"
 
-$(ODIR)/decrypt.o : $(SDIR)/decrypt.c $(SDIR)/decrypt.h
-	$(CC) -c $< -o $@
+$(ODIR)/%.o : $(SDIR)/%.c $(SDIR)/%.h
+	@echo "--------- Start building source file -----------"
+	$(CC) $(CFLAGS) -c $< -o $@
 
 run: all
-	$(EXE)
+	$(TARGET)
 
 .PHONY: clean
-	
 clean:
-	-rm -f $(ODIR)/*.o
-	-rm -f $(EDIR)/*
+	@echo "---------- Start cleaning~ -----------"
+	-rm -f $(ODIR)/*.o $(EDIR)/*
+	@echo "---------- Cleaning done! ------------"
