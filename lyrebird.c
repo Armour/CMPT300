@@ -40,12 +40,6 @@ char *decrypt(char *tweets_enc) {
 
     tweets_dec = (char *)malloc(sizeof(char) * TWEETS_MAX_LENGTH);
 
-//    if (!check_enc(tweets_enc)) {               /* Check if encrypted tweet has illegal characters */
-//        flag = 1;
-//        printf("There exist illegal characters in input file! Check your input file please.\n");
-//        return tweets_dec;
-//    }
-
     /* Step 1: Remove unnecessary characters in regular interval */
     rm_extra_char(tweets_enc, tweets_dec, &len);
 
@@ -83,10 +77,6 @@ char *decrypt(char *tweets_enc) {
     free(cipher_number);
     free(ptext_number);
 
-//    if (!check_dec(tweets_dec)) {               /* Check if encrypted tweet has illegal characters */
-//        printf("There exist illegal characters in decrypted tweet! (eg. $, \\, /, &) Check it please.\n");
-//    }
-
     return tweets_dec;
 }
 
@@ -106,7 +96,7 @@ int main(int argc, char *argv[]) {
     FILE *fin, *fout;
 
     if (argc != 3) {                                /* Check the number of arguments */
-        printf("Arguments number is not right, here is a good example:\n    bin/lyrebird encrypted_tweets.txt decrypted_output.txt \n");
+        printf("Arguments number is not right, here is a good example:\n    ./lyrebird encrypted_tweets.txt decrypted_output.txt \n");
         return 0;
     }
 
