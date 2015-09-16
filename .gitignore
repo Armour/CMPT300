@@ -1,4 +1,4 @@
 *.o
 decrypt
 .ycm_extra_conf_c.py
-
+*.log
