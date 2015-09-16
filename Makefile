@@ -9,30 +9,30 @@
 
 CC = gcc
 # -Wall turns on most compiler warnings
-CFLAGS  = -Wall
+CFLAGS  = -Wall -DMEMWATCH -DMEMWATCH_STDIO
 # directory for source files
 SDIR = src
 # directory for *.o files
 ODIR = obj
 # directory for executable files
 EDIR = bin
-TARGET = $(EDIR)/decrypt
-OBJECTS = $(ODIR)/decrypt.o
+TARGET = $(EDIR)/lyrebird
+OBJECTS = $(ODIR)/lyrebird.o $(ODIR)/memwatch.o $(ODIR)/line_io.o
 
-all : $(OBJECTS)
-	@echo "--------- Generating executable file -----------"
+.PHONY: all prep build clean
+
+all: prep build
+	
+build: $(OBJECTS)
+	@echo "--------------- Generating executable file ----------------"
 	$(CC) $(CFLAGS) -o $(TARGET) $^
-	@echo "--------- Compiling done! ----------------------"
 
 $(ODIR)/%.o : $(SDIR)/%.c $(SDIR)/%.h
-	@echo "--------- Start building source file -----------"
 	$(CC) $(CFLAGS) -c $< -o $@
 
-run: all
-	$(TARGET)
+prep:
+	@echo "--------------- Compiling source file ---------------------"
 
-.PHONY: clean
 clean:
-	@echo "---------- Start cleaning~ -----------"
 	-rm -f $(ODIR)/*.o $(EDIR)/*
-	@echo "---------- Cleaning done! ------------"
+
