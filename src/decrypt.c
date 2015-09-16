@@ -17,7 +17,7 @@ char table_itoc[41] = {' ', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
                        'u', 'v', 'w', 'x', 'y', 'z', '#', '.', ',', '\'',
                        '!', '?', '(', ')', '-', ':', '$', '/', '&', '\\'};
 
-/* Table used to transform from character to integer */
+/* Table used to transform from character to integer, -1 for character which can't be used */
 int table_ctoi[128] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
                         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
                         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -46,10 +46,9 @@ int table_ctoi[128] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
  */
 
 unsigned long long base41_ctoi(char *tweet, int pos) {
-    unsigned long long ans = 0;
+    unsigned long long ans = 0;             /* Cipher number of a group of characters */
     int i;
     for (i = 0; i < CONSTANT_MULTIPLE; ++i) {
-        //printf("%c %d\n", tweet[pos + i], table_ctoi[(int)tweet[pos + i]]);
         ans += table_ctoi[(int)tweet[pos + i]] * pow(POW_EXPONENT, CONSTANT_MULTIPLE - i - 1);
     }
     return ans;
@@ -77,7 +76,7 @@ void base41_itoc(unsigned long long number, char *group_char) {
 }
 
 /*
- * Function: rm_interval
+ * Function:  rm_extra_char
  * -------------------
  *   Remove unnecessary characters in regular interval
  *
@@ -90,9 +89,9 @@ void base41_itoc(unsigned long long number, char *group_char) {
  *      void
  */
 
-void rm_interval(char *input, char *output, int *len){
+void rm_extra_char(char *input, char *output, int *len){
     int i;
-    int count = 0;
+    int count = 0;              /* Count for regular interval */
     int tmp_len = 0;
 
     for (i = 0; i < *len; ++i) {
@@ -104,11 +103,11 @@ void rm_interval(char *input, char *output, int *len){
         output[tmp_len++] = input[i];
     }
 
-    *len = tmp_len;              /* Update length after remove some characters */
+    *len = tmp_len;             /* Update length after remove some characters */
 }
 
 /*
- * Function: mod_exp
+ * Function:  mapping_exp
  * -------------------
  *   Map each cipher number onto a similar plain-text number
  *
@@ -119,19 +118,18 @@ void rm_interval(char *input, char *output, int *len){
  *      plain-text number that you get from mapping
  */
 
-unsigned long long mod_exp(unsigned long long number) {
-    unsigned long long result = 1;
-    unsigned long long exponent = MOD_EXPONENT;
+unsigned long long mapping_exp(unsigned long long number) {
+    unsigned long long result = 1;                  /* Result for this mapping */
+    unsigned long long exp = MOD_EXPONENT;          /* Exponent number for this mapping */
 
     number = number % MOD_MODULUS;
-    while (exponent > 0) {
-        if (exponent % 2 == 1) {
+    while (exp > 0) {
+        if (exp % 2 == 1) {
             result = (result * number) % MOD_MODULUS;
         }
-        exponent = exponent >> 1;
+        exp = exp >> 1;
         number = (number * number) % MOD_MODULUS;
     }
 
-    //printf("%llu %llu\n", number, result);
     return result;
 }

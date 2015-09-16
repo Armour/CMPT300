@@ -29,9 +29,9 @@ unsigned long long base41_ctoi(char *tweet, int pos);
 void base41_itoc(unsigned long long number, char *group_char);
 
 /* Remove unnecessary characters in regular interval */
-void rm_interval(char *input, char *output, int *len);
+void rm_extra_char(char *input, char *output, int *len);
 
 /* Map each cipher number onto a similar plain-text number  */
-unsigned long long mod_exp(unsigned long long number);
+unsigned long long mapping_exp(unsigned long long number);
 
 #endif
