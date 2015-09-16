@@ -17,7 +17,7 @@ ODIR = obj
 # directory for executable files
 EDIR = bin
 TARGET = $(EDIR)/lyrebird
-OBJECTS = $(ODIR)/lyrebird.o $(ODIR)/memwatch.o $(ODIR)/line_io.o
+OBJECTS = $(ODIR)/lyrebird.o $(ODIR)/memwatch.o $(ODIR)/line_io.o $(ODIR)/decrypt.o
 
 .PHONY: all prep build clean
 
@@ -34,5 +34,5 @@ prep:
 	@echo "--------------- Compiling source file ---------------------"
 
 clean:
-	-rm -f $(ODIR)/*.o $(EDIR)/*
+	-rm -f $(ODIR)/*.o $(EDIR)/* *.log
 

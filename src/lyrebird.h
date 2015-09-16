@@ -12,6 +12,8 @@
 #ifndef LYREBIRD_LYREBIRD_H
 #define LYREBIRD_LYREBIRD_H
 
+#include <stdio.h>
+
 /* Decrypt the tweet through 4 steps */
 char *decrypt(char *tweet);
 

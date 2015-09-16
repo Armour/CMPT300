@@ -11,6 +11,27 @@
 
 #include "decrypt.h"
 
+/* Table used to transform from integer to character */
+char table_itoc[41] = {' ', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+                       'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+                       'u', 'v', 'w', 'x', 'y', 'z', '#', '.', ',', '\'',
+                       '!', '?', '(', ')', '-', ':', '$', '/', '&', '\\'};
+
+/* Table used to transform from character to integer */
+int table_ctoi[128] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                        -1, -1,  0, 31, -1, 27, 37, -1, 39, 30,
+                        33, 34, -1, -1, 29, 35, 28, 38, -1, -1,
+                        -1, -1, -1, -1, -1, -1, -1, -1, 36, -1,
+                        -1, -1, -1, 32, -1, -1, -1, -1, -1, -1,
+                        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                        -1, -1, 40, -1, -1, -1, -1,  1,  2,  3,
+                         4,  5,  6,  7,  8,  9, 10, 11, 12, 13,
+                        14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+                        24, 25, 26, -1, -1, -1, -1, -1};
+
 /*
  * Function: base41_ctoi
  * -------------------
@@ -27,8 +48,9 @@
 unsigned long long base41_ctoi(char *tweet, int pos) {
     unsigned long long ans = 0;
     int i;
-    for (i = 0; i < 6; ++i) {
-        ans += table_ctoi[(int)tweet[pos + i]] * pow(41, 5);
+    for (i = 0; i < CONSTANT_MULTIPLE; ++i) {
+        //printf("%c %d\n", tweet[pos + i], table_ctoi[(int)tweet[pos + i]]);
+        ans += table_ctoi[(int)tweet[pos + i]] * pow(POW_EXPONENT, CONSTANT_MULTIPLE - i - 1);
     }
     return ans;
 }
@@ -40,19 +62,76 @@ unsigned long long base41_ctoi(char *tweet, int pos) {
  *
  *   Parameters:
  *     number: the plain text which need to translate
+ *     group_char: a group of characters which need to translate
  *
  *   Returns:
- *      a group of characters which were translated from plain-text number
+ *      void
  */
 
-char *base41_itoc(unsigned long long number) {
+void base41_itoc(unsigned long long number, char *group_char) {
     int i;
-    char *group_char;
-    group_char = (char *)malloc(sizeof(char) * CONSTANT_MULTIPLE);
-    for (i = CONSTANT_MULTIPLE - 1; i >= 0; --i) {
-        group_char[CONSTANT_MULTIPLE - i] = table_itoc[(int)(number / pow(POW_EXPONENT, i))];
-        number /= pow(41, i);
+    for (i = 0; i < CONSTANT_MULTIPLE; ++i) {
+        group_char[i] = table_itoc[(int)(number / pow(POW_EXPONENT, CONSTANT_MULTIPLE - i - 1))];
+        number = number % (int)pow(POW_EXPONENT, CONSTANT_MULTIPLE - i - 1);
     }
-    return group_char;
 }
 
+/*
+ * Function: rm_interval
+ * -------------------
+ *   Remove unnecessary characters in regular interval
+ *
+ *   Parameters:
+ *      input: input characters array
+ *      output: output the array that some characters has been removed
+ *      len: length of the output characters array
+ *
+ *   Returns:
+ *      void
+ */
+
+void rm_interval(char *input, char *output, int *len){
+    int i;
+    int count = 0;
+    int tmp_len = 0;
+
+    for (i = 0; i < *len; ++i) {
+        count++;
+        if (count == REGULAR_INTERVAL) {        /* Remove regulare interval */
+            count = 0;
+            continue;
+        }
+        output[tmp_len++] = input[i];
+    }
+
+    *len = tmp_len;              /* Update length after remove some characters */
+}
+
+/*
+ * Function: mod_exp
+ * -------------------
+ *   Map each cipher number onto a similar plain-text number
+ *
+ *   Parameters:
+ *      number: the cipher number that need to mapped
+ *
+ *   Returns:
+ *      plain-text number that you get from mapping
+ */
+
+unsigned long long mod_exp(unsigned long long number) {
+    unsigned long long result = 1;
+    unsigned long long exponent = MOD_EXPONENT;
+
+    number = number % MOD_MODULUS;
+    while (exponent > 0) {
+        if (exponent % 2 == 1) {
+            result = (result * number) % MOD_MODULUS;
+        }
+        exponent = exponent >> 1;
+        number = (number * number) % MOD_MODULUS;
+    }
+
+    //printf("%llu %llu\n", number, result);
+    return result;
+}

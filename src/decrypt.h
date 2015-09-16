@@ -13,36 +13,25 @@
 #define LYREBIRD_DECRYPT_H
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 
 #define POW_EXPONENT 41
+#define REGULAR_INTERVAL 8
 #define CONSTANT_MULTIPLE 6
-
-/* Table used to transform from integer to character */
-char table_itoc[41] = {' ', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
-                       'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
-                       'u', 'v', 'w', 'x', 'y', 'z', '#', '.', ',', '\'',
-                       '!', '?', '(', ')', '-', ':', '$', '/', '&', '\\'};
-
-/* Table used to transform from character to integer */
-int table_ctoi[128] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                        -1, -1,  0, 31, -1, 27, 37, -1, 39, 30,
-                        33, 34, -1, -1, 29, 35, 28, 38, -1, -1,
-                        -1, -1, -1, -1, -1, -1, -1, -1, 36, -1,
-                        -1, -1, -1, 32, -1, -1, -1, -1, -1, -1,
-                        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                        -1, -1, 40, -1, -1, -1, -1,  1,  2,  3,
-                         4,  5,  6,  7,  8,  9, 10, 11, 12, 13,
-                        14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-                        24, 25, 26, -1, -1, -1, -1, -1};
+#define MOD_MODULUS 4294434817
+#define MOD_EXPONENT 1921821779
 
 /*  Translate each of the group of 6 characters into cipher number */
 unsigned long long base41_ctoi(char *tweet, int pos);
 
 /* Translate plain-text number into new group of 6 characters */
-char *base41_itoc(unsigned long long number);
+void base41_itoc(unsigned long long number, char *group_char);
+
+/* Remove unnecessary characters in regular interval */
+void rm_interval(char *input, char *output, int *len);
+
+/* Map each cipher number onto a similar plain-text number  */
+unsigned long long mod_exp(unsigned long long number);
 
 #endif

@@ -9,19 +9,16 @@
  *------------------------------------------------------
  */
 
-#include <stdio.h>
-
 #include "lyrebird.h"
 #include "line_io.h"
 #include "decrypt.h"
 #include "memwatch.h"
 
-#define REGULAR_INTERVAL 8
-
 int len;                    /* Length of tweet */
 int flag = 0;               /* Used to show program running status, if equal to 1, means there is some problems */
 char *tweets_enc;           /* Used to store the encrypted tweet */
 char *tweets_dec;           /* Used to store the decrypted tweet */
+char *group_char;           /* Used to store each group of characters */
 unsigned long long *cipher_number;         /* Used to store cipher number */
 unsigned long long *ptext_number;          /* Used to store plain-text number */
 
@@ -38,23 +35,13 @@ unsigned long long *ptext_number;          /* Used to store plain-text number */
  */
 
 char *decrypt(char *tweets_enc) {
-    int i;
-    int count = 0;
-    int tmp_len = 0;
-    int num_len ;
+    int i, j;
+    int num_len;
 
     tweets_dec = (char *)malloc(sizeof(char) * TWEETS_MAX_LENGTH);
 
     /* Step 1: Remove unnecessary characters in regular interval */
-    for (i = 0; i < len; ++i) {
-        count++;
-        if (count == REGULAR_INTERVAL) {
-            count = 0;
-            continue;
-        }
-        tweets_dec[tmp_len++] = tweets_enc[i];
-    }
-    len = tmp_len;              /* Update length after remove some characters */
+    rm_interval(tweets_enc, tweets_dec, &len);
 
     if (len % CONSTANT_MULTIPLE != 0) {         /* Test if len is multiple of 6 */
         flag = 1;
@@ -68,10 +55,28 @@ char *decrypt(char *tweets_enc) {
 
     for (i = 0; i < num_len; ++i) {
         cipher_number[i] = base41_ctoi(tweets_dec, i * CONSTANT_MULTIPLE);
+        //printf("%llu\n", cipher_number[i]);
     }
 
-    /* Step 3:  */
-    /* Step 4:  */
+    /* Step 3: Map each cipher number onto a similar plain-text number */
+    ptext_number = (unsigned long long *)malloc(sizeof(unsigned long long) * num_len);
+
+    for (i = 0; i < num_len; ++i) {
+        ptext_number[i] = mod_exp(cipher_number[i]);
+    }
+
+    /* Step 4: Get the final decrypted text by use the inverse function of Step 2 */
+    group_char = (char *)malloc(sizeof(char) * CONSTANT_MULTIPLE);
+    for (i = 0; i < num_len; ++i) {
+        base41_itoc(ptext_number[i], group_char);
+        for (j = 0; j < CONSTANT_MULTIPLE; ++j) {
+            tweets_dec[i * CONSTANT_MULTIPLE + j] = group_char[j];
+        }
+    }
+
+    free(group_char);
+    free(cipher_number);
+    free(ptext_number);
 
     return tweets_dec;
 }
