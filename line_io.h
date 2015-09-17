@@ -1,7 +1,14 @@
 /*------------------------------------------------------
  *
  *  line_io.h
- *  LyreBird
+ *
+ *  Project         : LyreBird
+ *  Name            : guo chong
+ *  Student ID      : 301295753
+ *  SFU username    : armourg
+ *  Lecture section : D1
+ *  Instructor      : Brain G.Booth
+ *  TA              : Scott Kristjanson
  *
  *  Created by Armour on 15/09/2015
  *  Copyright (c) 2015 Armour. All rights reserved.

@@ -1,7 +1,14 @@
 /*------------------------------------------------------
  *
  *  lyrebird.c
- *  LyreBird
+ *
+ *  Project         : LyreBird
+ *  Name            : Guo Chong
+ *  Student ID      : 301295753
+ *  SFU username    : armourg
+ *  Lecture section : D1
+ *  Instructor      : Brain G.Booth
+ *  TA              : Scott Kristjanson
  *
  *  Created by Armour on 14/09/2015
  *  Copyright (c) 2015 Armour. All rights reserved.
@@ -49,7 +56,7 @@ char *decrypt(char *tweets_enc) {
         return tweets_dec;
     }
 
-    /* Step 2: Transform each group of 6 into an integer using base 41 */
+    /* Step 2: Transform each group of 6 characters into an integer using base 41 */
     num_len = len / CONSTANT_MULTIPLE;
     cipher_number = (unsigned long long *)malloc(sizeof(unsigned long long) * num_len);
 
