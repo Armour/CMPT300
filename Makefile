@@ -9,6 +9,7 @@
 
 CC = gcc
 CFLAGS  = -DMEMWATCH -DMEMWATCH_STDIO
+LIB = -lm
 TARGET = lyrebird
 OBJECTS = lyrebird.o memwatch.o line_io.o decrypt.o
 
@@ -18,7 +19,7 @@ all: prep build
 	
 build: $(OBJECTS)
 	@echo "--------------- Generating executable file ----------------"
-	$(CC) $(CFLAGS) -o $(TARGET) $^
+	$(CC) $(CFLAGS) -o $(TARGET) $^ $(LIB)
 
 $(ODIR)/%.o : $(SDIR)/%.c $(SDIR)/%.h
 	$(CC) $(CFLAGS) -c $< -o $@
