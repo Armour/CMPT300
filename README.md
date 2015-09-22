@@ -46,6 +46,5 @@ More Details can be found in [Assignment 1 - LyreBird](https://courses.cs.sfu.ca
 * Check main function arguments number.
 * Check whether input file exist.
 * Check whether the tweet which after removed extra characters is multiple of 6.
-* Check whether there are illegal characters in encrypted tweets.
 * Dynamic manage memory and also free all when program finished.
 
