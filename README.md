@@ -1,31 +1,31 @@
-/*------------------------------------------------------
- *
- *  README
- *
- *  Project         : LyreBird
- *  Name            : Guo Chong
- *  Student ID      : 301295753
- *  SFU username    : armourg
- *  Lecture section : D1
- *  Instructor      : Brain G.Booth
- *  TA              : Scott Kristjanson
- *
- *  Created by Armour on 14/09/2015
- *  Copyright (c) 2015 Armour. All rights reserved.
- *
- *------------------------------------------------------
- */
-
-# LyreBird
+# ------------------------------------------------------------------------------------ #
+#  ___           ___    ___ ________  _______   ________  ___  ________  ________      #
+# |\  \         |\  \  /  /|\   __  \|\  ___ \ |\   __  \|\  \|\   __  \|\   ___ \     #
+# \ \  \        \ \  \/  / | \  \|\  \ \   __/|\ \  \|\ /\ \  \ \  \|\  \ \  \_|\ \    #
+#  \ \  \        \ \    / / \ \   _  _\ \  \_|/_\ \   __  \ \  \ \   _  _\ \  \ \\ \   #
+#   \ \  \____    \/  /  /   \ \  \\  \\ \  \_|\ \ \  \|\  \ \  \ \  \\  \\ \  \_\\ \  #
+#    \ \_______\__/  / /      \ \__\\ _\\ \_______\ \_______\ \__\ \__\\ _\\ \_______\ #
+#     \|_______|\___/ /        \|__|\|__|\|_______|\|_______|\|__|\|__|\|__|\|_______| #
+#              \|___|/                                                                 #
+# ------------------------------------------------------------------------------------ #
 
 ---
 
+# Basic
 This is a program to decrypt encrypted tweet follow four steps below:
 1. Remove unnecessary characters in regular interval.
 2. Transform each group of 6 characters into an integer using base 41.
 3. Map each cipher number onto a similar plain-text number.
 4. Get the final decrypted text by use the inverse function of Step 2.
 More Details can be found in [Assignment 1 - LyreBird](https://courses.cs.sfu.ca/2015fa-cmpt-300-d1/pages/AssignmentOne/view)
+
+## Author Information
+*  Name            : Guo Chong
+*  Student ID      : 301295753
+*  SFU username    : armourg
+*  Lecture section : D1
+*  Instructor      : Brain G.Booth
+*  TA              : Scott Kristjanson
 
 ## Project Structure
 * "lyrebird.c" : mainly two functions, one controls the main loop of this program, another is a decrypt function,
@@ -43,8 +43,8 @@ More Details can be found in [Assignment 1 - LyreBird](https://courses.cs.sfu.ca
 4. You can run command "make clean" to remove all intermediate files.
 
 ## Robustness
-* Check main function arguments number.
-* Check whether input file exist.
-* Check whether the tweet which after removed extra characters is multiple of 6.
-* Dynamic manage memory and also free all when program finished.
+* Check the number of main function arguments.
+* Check whether the input file exist or not.
+* Check whether the tweet is multiple of 6 after removeing extra characters.
+* Dynamic manage memory and guarantee to free all when program finished.
 

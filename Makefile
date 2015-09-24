@@ -1,9 +1,16 @@
 # ------------------------------------------------
 # Makefile
 #
-#     Author: Armour Guo
-#     Email : gc497052684@gmail.com
-#     Date  : 2015-09-11
+#   Project         : LyreBird
+#   Name            : Guo Chong
+#   Student ID      : 301295753
+#   SFU username    : armourg
+#   Lecture section : D1
+#   Instructor      : Brain G.Booth
+#   TA              : Scott Kristjanson
+#
+#   Created by Armour on 11/09/2015
+#   Copyright (c) 2015 Armour. All rights reserved.
 #
 # ------------------------------------------------
 
