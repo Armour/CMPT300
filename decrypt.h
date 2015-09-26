@@ -3,14 +3,14 @@
  *  decrypt.h
  *
  *  Project         : LyreBird
- *  Name            : guo chong
+ *  Name            : Guo Chong
  *  Student ID      : 301295753
  *  SFU username    : armourg
  *  Lecture section : D1
  *  Instructor      : Brain G.Booth
  *  TA              : Scott Kristjanson
  *
- *  Created by Armour on 16/09/2015
+ *  Created by Armour on 14/09/2015
  *  Copyright (c) 2015 Armour. All rights reserved.
  *
  *------------------------------------------------------
@@ -20,25 +20,11 @@
 #define LYREBIRD_DECRYPT_H
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
 
-#define POW_EXPONENT 41
-#define REGULAR_INTERVAL 8
-#define CONSTANT_MULTIPLE 6
-#define MOD_MODULUS 4294434817
-#define MOD_EXPONENT 1921821779
+/* Decrypt each tweet through 4 steps */
+char *decrypt_each(char *tweet);
 
-/*  Translate each of the group of 6 characters into cipher number */
-unsigned long long base41_ctoi(char *tweet, int pos);
-
-/* Translate plain-text number into new group of 6 characters */
-void base41_itoc(unsigned long long number, char *group_char);
-
-/* Remove unnecessary characters in regular interval */
-void rm_extra_char(char *input, char *output, int *len);
-
-/* Map each cipher number onto a similar plain-text number  */
-unsigned long long mapping_exp(unsigned long long number);
+/* Decrypt all tweets in config file */
+int decrypt(int argc, char *argv[]);
 
 #endif
