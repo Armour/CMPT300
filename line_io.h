@@ -3,7 +3,7 @@
  *  line_io.h
  *
  *  Project         : LyreBird
- *  Name            : guo chong
+ *  Name            : Guo Chong
  *  Student ID      : 301295753
  *  SFU username    : armourg
  *  Lecture section : D1
@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define TWEETS_MAX_LENGTH 160
+#define TWEETS_MAX_LENGTH 200
 
 /* Get one line input from file */
 char *input_line(FILE *fin, int *len);

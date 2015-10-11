@@ -19,6 +19,7 @@
 #include "decrypt.h"
 #include "dec_func.h"
 #include "line_io.h"
+#include "time.h"
 #include "memwatch.h"
 
 int len;                                    /* Length of tweet */
@@ -51,8 +52,18 @@ char *decrypt_each(char *tweets_enc) {
     rm_extra_char(tweets_enc, tweets_dec, &len);
 
     if (len % CONSTANT_MULTIPLE != 0) {         /* Check if len is multiple of 6 */
+        char *out_time;
+        time_t raw_time;
+        struct tm *tmp_time;
+        out_time = (char *)malloc(sizeof(char) * 50);
+        time(&raw_time);
+        tmp_time = localtime(&raw_time);
+        strftime(out_time, 50, "%a %b %d %H:%M:%S %Y", tmp_time);
+        flockfile(stdout);
+        printf("[%s] Child process ID #%d encounter error: There is a tweet that is not multiple of 6!\n", out_time, getpid());
+        funlockfile(stdout);
+        free(out_time);
         flag = 1;
-        printf("There is a tweet that is not multiple of 6! Check your input file please.\n");
         return tweets_dec;
     }
 
@@ -90,29 +101,35 @@ char *decrypt_each(char *tweets_enc) {
 /*
  * Function: decrypt
  * -------------------
- *   Main function of lyrebird
+ *   Main function of decryption
  *
  *   Parameters:
- *      no parameters
+ *      input: the file name of encrypted file
+ *      output: the file name of decrypted file
  *
  *   Returns:
  *      return 0 for normal exit
  */
 
-int decrypt(int argc, char *argv[]) {
+int decrypt(char *input, char *output) {
     FILE *fin, *fout;
 
-    if (argc != 3) {                                /* Check the number of arguments */
-        printf("Arguments number is not right, here is a good example:\n    ./lyrebird encrypted_tweets.txt decrypted_output.txt \n");
-        return 0;
-    }
-
-    fin = fopen(argv[1], "r");
-    fout = fopen(argv[2], "w+");
+    fin = fopen(input, "r");
+    fout = fopen(output, "w+");
 
     if (fin == NULL) {                              /* Check input file is exist or not */
-        printf("Error when opening file, input file not exist!\n");
-        return 0;
+        char *out_time;
+        time_t raw_time;
+        struct tm *tmp_time;
+        out_time = (char *)malloc(sizeof(char) * 50);
+        time(&raw_time);
+        tmp_time = localtime(&raw_time);
+        strftime(out_time, 50, "%a %b %d %H:%M:%S %Y", tmp_time);
+        flockfile(stdout);
+        printf("[%s] Child process ID #%d encounter error: Error when opening file, input file not exist!\n", out_time, getpid());
+        funlockfile(stdout);
+        free(out_time);
+        return 1;
     }
 
     while (!feof(fin)) {

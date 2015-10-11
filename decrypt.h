@@ -20,11 +20,12 @@
 #define LYREBIRD_DECRYPT_H
 
 #include <stdio.h>
+#include <unistd.h>
 
 /* Decrypt each tweet through 4 steps */
 char *decrypt_each(char *tweet);
 
 /* Decrypt all tweets in config file */
-int decrypt(int argc, char *argv[]);
+int decrypt(char *input, char *output);
 
 #endif

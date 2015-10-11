@@ -3,7 +3,7 @@
  *  line_io.c
  *
  *  Project         : LyreBird
- *  Name            : guo chong
+ *  Name            : Guo Chong
  *  Student ID      : 301295753
  *  SFU username    : armourg
  *  Lecture section : D1

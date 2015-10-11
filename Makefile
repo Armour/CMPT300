@@ -38,4 +38,5 @@ clean:
 	-rm -f lyrebird
 	-rm -f *.o
 	-rm -f *.log
+	-rm -f core
 

@@ -3,7 +3,7 @@
  *  dec_func.c
  *
  *  Project         : LyreBird
- *  Name            : guo chong
+ *  Name            : Guo Chong
  *  Student ID      : 301295753
  *  SFU username    : armourg
  *  Lecture section : D1
@@ -17,6 +17,7 @@
  */
 
 #include "dec_func.h"
+#include "memwatch.h"
 
 /* Table used to transform from integer to character */
 char table_itoc[41] = {' ', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
