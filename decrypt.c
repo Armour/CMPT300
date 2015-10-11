@@ -55,15 +55,18 @@ char *decrypt_each(char *tweets_enc) {
         char *out_time;
         time_t raw_time;
         struct tm *tmp_time;
-        out_time = (char *)malloc(sizeof(char) * 50);
-        time(&raw_time);
+        out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
+
+        time(&raw_time);                        /* Get current time */
         tmp_time = localtime(&raw_time);
-        strftime(out_time, 50, "%a %b %d %H:%M:%S %Y", tmp_time);
-        flockfile(stdout);
+        strftime(out_time, TIME_MAXLENGTH, "%a %b %d %H:%M:%S %Y", tmp_time);
+
+        flockfile(stdout);                      /* Print error message in child process */
         printf("[%s] Child process ID #%d encounter error: There is a tweet that is not multiple of 6!\n", out_time, getpid());
         funlockfile(stdout);
-        free(out_time);
+
         flag = 1;
+        free(out_time);
         return tweets_dec;
     }
 
@@ -121,19 +124,22 @@ int decrypt(char *input, char *output) {
         char *out_time;
         time_t raw_time;
         struct tm *tmp_time;
-        out_time = (char *)malloc(sizeof(char) * 50);
-        time(&raw_time);
+        out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
+
+        time(&raw_time);                            /* Get current time */
         tmp_time = localtime(&raw_time);
-        strftime(out_time, 50, "%a %b %d %H:%M:%S %Y", tmp_time);
-        flockfile(stdout);
-        printf("[%s] Child process ID #%d encounter error: Error when opening file, input file not exist!\n", out_time, getpid());
+        strftime(out_time, TIME_MAXLENGTH, "%a %b %d %H:%M:%S %Y", tmp_time);
+
+        flockfile(stdout);                          /* Print error message in child process */
+        printf("[%s] Child process ID #%d encounter error: Error when opening file %s, input file not exist!\n", out_time, getpid(), input);
         funlockfile(stdout);
+
         free(out_time);
         return 1;
     }
 
     while (!feof(fin)) {
-        tweets_enc = input_line(fin, &len);         /* Get each line's tweet from input file */
+        tweets_enc = input_line(fin, &len);             /* Get each line's tweet from input file */
 
         if (len != -1) {
             tweets_dec = decrypt_each(tweets_enc);      /* Decrypt each line's tweet */
@@ -142,7 +148,7 @@ int decrypt(char *input, char *output) {
                 free(tweets_enc);
                 break;
             }
-            output_line(fout, tweets_dec, len);     /* Ouput the decrypted tweet */
+            output_line(fout, tweets_dec, len);         /* Ouput the decrypted tweet */
             free(tweets_dec);
         }
 

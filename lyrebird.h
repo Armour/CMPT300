@@ -24,7 +24,6 @@
 #include <unistd.h>
 
 #define FILE_MAXLENGTH 1030
-#define TIME_MAXLENGTH 50
 
 /* Used to get current time in specify format */
 void get_time(char *out_time);

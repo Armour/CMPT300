@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#define TIME_MAXLENGTH 50
+
 /* Decrypt each tweet through 4 steps */
 char *decrypt_each(char *tweet);
 
