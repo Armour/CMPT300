@@ -79,51 +79,41 @@ int main(int argc, char *argv[]) {
     dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
     out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
 
-    while (1) {
-        fscanf(fp, "%s", enc_txt);
+    while (fscanf(fp, "%s", enc_txt) != EOF) {      /* Read until end of file */
         fscanf(fp, "%s", dec_txt);
 
-        if (feof(fp)) {             /* If end of file then break */
-            free(enc_txt);
-            free(dec_txt);
-            free(out_time);         /* Remember to free all and close file pointer */
-            fclose(fp);
-            break;
-        }
-
-        //fflush(stdout);
         pid = fork();               /* Fork! */
 
         if (pid < 0) {              /* If fork failed */
             get_time(out_time);
-            flockfile(stdout);      /* Flockfile is used to make printf function atomic in stdout */
             printf("[%s] Fork failed in process #%d!\n", out_time, getpid());
-            funlockfile(stdout);
             return 1;               /* Exit non-zero value */
         }
 
         if (pid != 0) {             /* If fork successful and is in parent process */
             count++;
             get_time(out_time);
-            flockfile(stdout);
             printf("[%s] Child process ID #%d created to decrypt %s\n", out_time, (int)pid, enc_txt);
-            funlockfile(stdout);
         } else if (pid == 0) {      /* If is in child process */
             int status = decrypt(enc_txt, dec_txt);
-            flockfile(stdout);
             get_time(out_time);
             if (status == 0) {      /* If child process exit without error */
                 printf("[%s] Decryption of %s complete. Process ID #%d Exiting.\n", out_time, enc_txt, getpid());
             } else {                /* If child process terminate unexpectly! */
                 printf("[%s] Child process ID #%d did not terminate successfully.\n", out_time, getpid());
             }
-            funlockfile(stdout);
-            free(enc_txt);
+            free(enc_txt);          /* Remember to free all and close file pointer */
             free(dec_txt);
             free(out_time);
+            fclose(fp);
             return 0;
         }
     }
+
+    free(enc_txt);                  /* Remember to free all and close file pointer */
+    free(dec_txt);
+    free(out_time);
+    fclose(fp);
 
     for(i = 0; i < count; i++) {    /* Parent process wait for all child processes before exit */
         wait(NULL);

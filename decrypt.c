@@ -61,9 +61,8 @@ char *decrypt_each(char *tweets_enc) {
         tmp_time = localtime(&raw_time);
         strftime(out_time, TIME_MAXLENGTH, "%a %b %d %H:%M:%S %Y", tmp_time);
 
-        flockfile(stdout);                      /* Print error message in child process */
+                                                /* Print error message in child process */
         printf("[%s] Child process ID #%d encounter error: There is a tweet that is not multiple of 6!\n", out_time, getpid());
-        funlockfile(stdout);
 
         flag = 1;
         free(out_time);
@@ -130,11 +129,12 @@ int decrypt(char *input, char *output) {
         tmp_time = localtime(&raw_time);
         strftime(out_time, TIME_MAXLENGTH, "%a %b %d %H:%M:%S %Y", tmp_time);
 
-        flockfile(stdout);                          /* Print error message in child process */
+                                                    /* Print error message in child process */
         printf("[%s] Child process ID #%d encounter error: Error when opening file %s, input file not exist!\n", out_time, getpid(), input);
-        funlockfile(stdout);
 
         free(out_time);
+        fclose(fin);
+        fclose(fout);
         return 1;
     }
 
