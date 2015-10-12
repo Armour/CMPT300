@@ -28,4 +28,7 @@
 /* Used to get current time in specify format */
 void get_time(char *out_time);
 
+/* Used to free memory and close file pointer before program exit */
+void clean_up(void);
+
 #endif

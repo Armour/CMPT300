@@ -44,7 +44,26 @@ void get_time(char *out_time) {
     struct tm *tmp_time;            /* Used to generate output time */
     time(&raw_time);
     tmp_time = localtime(&raw_time);
-    strftime(out_time, TIME_MAXLENGTH, "%a %b %d %H:%M:%S %Y", tmp_time);
+    strftime(out_time, TIME_MAXLENGTH, "%a %b %d %H:%M:%S %Y", tmp_time);       /* Format time */
+}
+
+/*
+ * Function: Clean_up
+ * -------------------
+ *   This function used to free memory and close file pointer before program exit
+ *
+ *   Parameters:
+ *      no parameters
+ *
+ *   Returns:
+ *      void
+ */
+
+void clean_up(void) {               /* Always remember to free all and close file pointer! */
+    free(enc_txt);
+    free(dec_txt);
+    free(out_time);
+    fclose(fp);
 }
 
 /*
@@ -87,6 +106,7 @@ int main(int argc, char *argv[]) {
         if (pid < 0) {              /* If fork failed */
             get_time(out_time);
             printf("[%s] Fork failed in process #%d!\n", out_time, getpid());
+            clean_up();             /* Always remember to free all and close file pointer! */
             return 1;               /* Exit non-zero value */
         }
 
@@ -94,30 +114,22 @@ int main(int argc, char *argv[]) {
             count++;
             get_time(out_time);
             printf("[%s] Child process ID #%d created to decrypt %s\n", out_time, (int)pid, enc_txt);
-        } else if (pid == 0) {      /* If is in child process */
+        } else if (pid == 0) {      /* Else if in child process */
             int status = decrypt(enc_txt, dec_txt);
             get_time(out_time);
-            if (status == 0) {      /* If child process exit without error */
+            if (status == 0)        /* If child process exit without error */
                 printf("[%s] Decryption of %s complete. Process ID #%d Exiting.\n", out_time, enc_txt, getpid());
-            } else {                /* If child process terminate unexpectly! */
+            else                    /* If child process terminate unexpectly! */
                 printf("[%s] Child process ID #%d did not terminate successfully.\n", out_time, getpid());
-            }
-            free(enc_txt);          /* Remember to free all and close file pointer */
-            free(dec_txt);
-            free(out_time);
-            fclose(fp);
+            clean_up();             /* Always remember to free all and close file pointer! */
             return 0;
         }
     }
-
-    free(enc_txt);                  /* Remember to free all and close file pointer */
-    free(dec_txt);
-    free(out_time);
-    fclose(fp);
 
     for(i = 0; i < count; i++) {    /* Parent process wait for all child processes before exit */
         wait(NULL);
     }
 
+    clean_up();                     /* Always remember to free all and close file pointer! */
     return 0;
 }

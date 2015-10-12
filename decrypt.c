@@ -22,7 +22,7 @@
 #include "time.h"
 #include "memwatch.h"
 
-int len;                                    /* Length of tweet */
+int len = 0;                                /* Length of tweet */
 int flag = 0;                               /* Used to show program running status, if equal to 1, means there is some problems */
 char *tweets_enc;                           /* Used to store the encrypted tweet */
 char *tweets_dec;                           /* Used to store the decrypted tweet */
@@ -158,6 +158,6 @@ int decrypt(char *input, char *output) {
     fclose(fin);
     fclose(fout);
 
-    return 0;
+    return flag;
 }
 
