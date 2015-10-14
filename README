@@ -16,14 +16,6 @@
 
 ---
 
-## Basic
-This is a program to decrypt large numbers of encrypted tweets, to speed up and take advantages of multiple CPU cores, we use fork function in C to spread the decryption task across multiple processes, each tweet’s decryption follow four steps below:
-1. Remove unnecessary characters in regular interval.
-2. Transform each group of 6 characters into an integer using base 41.
-3. Map each cipher number onto a similar plain-text number.
-4. Get the final decrypted text by use the inverse function of Step 2.
-More Details can be found in [Assignment 2 - Process Management](https://courses.cs.sfu.ca/2015fa-cmpt-300-d1/pages/AssignmentTwo/view)
-
 ## Author Information
 *  Name            : Guo Chong
 *  Student ID      : 301295753
@@ -31,6 +23,14 @@ More Details can be found in [Assignment 2 - Process Management](https://courses
 *  Lecture section : D1
 *  Instructor      : Brain G.Booth
 *  TA              : Scott Kristjanson
+
+## Description
+This is a program to decrypt large numbers of encrypted tweets, to speed up and take advantages of multiple CPU cores, we use fork function in C to spread the decryption task across multiple processes, each tweet’s decryption follow four steps below:
+1. Remove unnecessary characters in regular interval.
+2. Transform each group of 6 characters into an integer using base 41.
+3. Map each cipher number onto a similar plain-text number.
+4. Get the final decrypted text by use the inverse function of Step 2.
+More Details can be found in [Assignment 2 - Process Management](https://courses.cs.sfu.ca/2015fa-cmpt-300-d1/pages/AssignmentTwo/view)
 
 ## Project Structure
 * "lyrebird.c" : contains the main loop function which using fork function to create child processes to do the decryption for each tweet file.
