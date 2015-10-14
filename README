@@ -33,7 +33,7 @@ More Details can be found in [Assignment 2 - Process Management](https://courses
 *  TA              : Scott Kristjanson
 
 ## Project Structure
-* "lyrebird.c" : contains the main loop function which using fork function to create child processes to do the decryption for each tweet file.   
+* "lyrebird.c" : contains the main loop function which using fork function to create child processes to do the decryption for each tweet file.
 * "decrypt.c" : contains a decrypt function, which go through 4 steps and in each step it call some functions in dec_func.c to handle decryption.
 * "dec_func.c"  : contains many functions that used to decrypt the tweet, like remove extra characters, mapping characters to integer value and mapping integer to characters. (Detail information can be found by reading comments of this file.)
 * "line_io.c"  : contains two functions, input one line data from file and output one line data to file

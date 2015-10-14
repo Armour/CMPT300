@@ -2,6 +2,9 @@
  *
  *  lyrebird.c
  *
+ *  this file contains the main function that using 'fork'
+ *  to create child processes to decrypt each tweet file.
+ *
  *  Project         : LyreBird
  *  Name            : Guo Chong
  *  Student ID      : 301295753

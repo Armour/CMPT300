@@ -2,6 +2,10 @@
  *
  *  dec_func.c
  *
+ *  this file contains many functions that used to decrypt
+ *  the tweet, like remove extra characters, mapping characters
+ *  to integer value and mapping integer to characters, etc.
+ *
  *  Project         : LyreBird
  *  Name            : Guo Chong
  *  Student ID      : 301295753

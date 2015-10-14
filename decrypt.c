@@ -2,6 +2,10 @@
  *
  *  decrypt.c
  *
+ *  this file contains the main decryption functions which go
+ *  through 4 steps and in each step, call some functions in
+ *  dec_func.c to handle decryption.
+ *
  *  Project         : LyreBird
  *  Name            : Guo Chong
  *  Student ID      : 301295753

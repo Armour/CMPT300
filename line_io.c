@@ -2,6 +2,9 @@
  *
  *  line_io.c
  *
+ *  this file contains contains two functions, one is input one
+ *  line data from file and another is output one line data to file
+ *
  *  Project         : LyreBird
  *  Name            : Guo Chong
  *  Student ID      : 301295753
