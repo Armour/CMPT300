@@ -1,6 +1,6 @@
 *.o
 decrypted*
-.ycm_extra_conf_c.py
+.ycm*
 *.log
 data
 report.html
