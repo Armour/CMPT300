@@ -2,7 +2,7 @@
 
 
 ## Overview
-This program is used to decrypt large amounts of encrypted tweet files, to reduce the overall running time and take advantages of multiple CPU cores, it used fork function to spread tasks across multiple processes. 
+This program is used to decrypt large amounts of encrypted tweet files, to reduce the overall running time and take advantages of multiple CPU cores, it used fork function to spread tasks across multiple processes.
 
 ## Design && Implementation
 The entry point of this project is `lyrebird.c`, which contains the main loop function and uses fork function to do multiple processes decryption. For each child process, it calls decryption function. The implementation of decryption function is in `decrypt.c` and `dec_fun.c`, while `decrypt.c` has the control flow and `dec_fun.c` has all the functions used to decrypt tweet in each step. Also, I made the input and output of tweet into a single module, called `line_io.c`, I think it is good for future development. Last but not least, `memwatch.c` is used for detecting un-freed memory and some buffer problems like overflow and underflow.
