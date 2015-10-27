@@ -54,6 +54,29 @@ void get_time(char *out_time) {
 }
 
 /*
+ * Function: Trim_space
+ * -------------------
+ *   This function is used to trim leading and trailing spaces in a string.
+ *
+ *   Parameters:
+ *      str: input string that needs to trimming
+ *
+ *   Returns:
+ *      a new string without leading and trailing spaces
+ */
+
+char *trim_space(char *str) {
+    char *end;
+    end = str + strlen(str) - 1;
+    while (*str == ' ') str++;                  /* Trim the leading spaces */
+    if (*str == '\0')                           /* If all the string contains only spaces */
+        return str;
+    while (end > str && (*end == ' ' || *end == '\n')) end--;           /* Trim the trailing spaces and new line character */
+    *(end + 1) = '\0';                          /* Add new terminator */
+    return str;
+}
+
+/*
  * Function: Get_schedule
  * -------------------
  *   This function is uesd to get the scheduling algorithm before input tweet files
@@ -74,9 +97,9 @@ void get_schedule(char *out_time) {
         printf("Null!\n");                                  /* If this is an empty file */
         free(out_time);
         exit(1);
-    } else if (!strcmp(schedule, "round robin\n")) {        /* If first line equals to 'round robin' */
+    } else if (!strcmp(trim_space(schedule), "round robin")) {        /* If first line equals to 'round robin' */
         schedule_flag = 0;
-    } else if (!strcmp(schedule, "fcfs\n")) {               /* If first line equals to 'fcfs' */
+    } else if (!strcmp(trim_space(schedule), "fcfs")) {               /* If first line equals to 'fcfs' */
         schedule_flag = 1;
     } else {                                                /* If is other incorrect string */
         printf("No!\n");

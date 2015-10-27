@@ -29,6 +29,12 @@
 /* Used to get current time in specify format */
 void get_time(char *out_time);
 
+/* Used to trim leading and trailing spaces in a string  */
+char *trim_space(char *str);
+
+/* Used to get scheduling algorithm name */
+void get_schedule(char *out_time);
+
 /* Used to free memory and close file pointer before program exit */
 void clean_up(void);
 
