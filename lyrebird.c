@@ -28,6 +28,9 @@ FILE *fp;                       /* The file pointer that used to open config fil
 char *enc_txt;                  /* Used to store encrypted file name */
 char *dec_txt;                  /* Used to store decrypted file name */
 char *out_time;                 /* Used to store output time */
+int schedule_flag = 0;          /* Flag equls to 0 means using 'round robin' scheduling algorithm,
+                                   flag equls to 1 means using 'first come first served' scheduling algorithm,
+                                   default 0 */
 pid_t pid;                      /* Used to store fork pid */
 
 /*
@@ -51,9 +54,41 @@ void get_time(char *out_time) {
 }
 
 /*
+ * Function: Get_schedule
+ * -------------------
+ *   This function is uesd to get the scheduling algorithm before input tweet files
+ *   If not get the right scheduling algorithm, it should return with non-zero state
+ *
+ *   Parameters:
+ *      out_time: it needs to be free before exit
+ *
+ *   Returns:
+ *      void
+ */
+
+void get_schedule(char *out_time) {
+    char *schedule;
+    size_t len;
+    size_t read = getline(&schedule, &len, fp);             /* Get first line input */
+    if ((int)read == -1) {
+        printf("Null!\n");                                  /* If this is an empty file */
+        free(out_time);
+        exit(1);
+    } else if (!strcmp(schedule, "round robin\n")) {        /* If first line equals to 'round robin' */
+        schedule_flag = 0;
+    } else if (!strcmp(schedule, "fcfs\n")) {               /* If first line equals to 'fcfs' */
+        schedule_flag = 1;
+    } else {                                                /* If is other incorrect string */
+        printf("No!\n");
+        free(out_time);
+        exit(1);
+    }
+}
+
+/*
  * Function: Clean_up
  * -------------------
- *   This function used to free memory and close file pointer before program exit
+ *   This function is used to free memory and close file pointer before program exit
  *
  *   Parameters:
  *      no parameters
@@ -103,6 +138,9 @@ int main(int argc, char *argv[]) {
         free(out_time);
         return 1;
     }
+
+    get_schedule(out_time);
+    printf("%d\n", schedule_flag);
 
     enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
     dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);

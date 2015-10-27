@@ -1,3 +1,4 @@
+round robin   
 ./encrypted_tweets.txt ./decrypted_tweets.txt
 /Users/armour/more_tweets.txt /Users/armour/output.txt
 ./data/t2-et-Assignment-Example.txt ./data/t2output
