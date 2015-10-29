@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
         if (pid != 0) {                             /* If fork successful and is in parent process */
             count++;
             get_time(out_time);
-            printf("[%s] Child process ID #%d created to decrypt %s\n", out_time, (int)pid, enc_txt);
+            printf("[%s] Child process ID #%d will decrypt %s\n", out_time, (int)pid, enc_txt);
         }
 
         if (pid == 0) {                             /* If in child process */

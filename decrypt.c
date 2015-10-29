@@ -162,6 +162,22 @@ int decrypt(char *input, char *output) {
     fclose(fin);
     fclose(fout);
 
+    if (flag == 0) {                                    /* If decrypt tweets without error */
+        char *out_time;
+        time_t raw_time;
+        struct tm *tmp_time;
+        out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
+
+        time(&raw_time);                            /* Get current time */
+        tmp_time = localtime(&raw_time);
+        strftime(out_time, TIME_MAXLENGTH, "%a %b %d %H:%M:%S %Y", tmp_time);
+
+                                                    /* Print error message in child process */
+        printf("[%s] Process ID #%d decrypted %s successfully.\n", out_time, getpid(), input);
+
+        free(out_time);
+    }
+
     return flag;
 }
 
