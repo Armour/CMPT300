@@ -52,5 +52,5 @@ More Details can be found in [Assignment 2 - Process Management](https://courses
 * Check whether the tweet is multiple of 6 after removing extra characters.
 * Dynamic manage memory and guarantee to free all when program finished.
 * Parent process wait until all his child processers finished before exit.
-* empty data and largest data tested.
+* Empty data and largest data tested.
 

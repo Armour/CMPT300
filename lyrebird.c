@@ -40,6 +40,8 @@ int processor_number_now = -1;  /* The number of processors that already been us
 int *parent_to_child;           /* Pipe that used to transmit messagee from parent processor to child processor */
 int *child_to_parent;           /* Pipe that used to transmit messagee from child processor to parent processor */
 int *pid_array;                 /* Used to store all the child pid */
+fd_set rfds;                    /* The set of file descriptor */
+struct timeval tv;              /* Time interval used on select function */
 
 /*
  * Function: Get_time
@@ -60,7 +62,6 @@ void get_time(void) {
     tmp_time = localtime(&raw_time);
     strftime(out_time, TIME_MAXLENGTH, "%a %b %d %H:%M:%S %Y", tmp_time);       /* Format time */
 }
-
 
 /*
  * Function: Init_pipe
@@ -103,6 +104,18 @@ void init_pipe(void) {
     }
 }
 
+/*
+ * Function: Close_ptc_pipe
+ * -------------------
+ *   This function is used to close the pipes from parent to child
+ *
+ *   Parameters:
+ *      p: the number of the processor which we do not want to close its pipe
+ *
+ *   Returns:
+ *      void
+ */
+
 void close_ptc_pipe(int p) {
     int i;
     for (i = 0; i < processor_number_limit * 2; ++i) {
@@ -111,11 +124,43 @@ void close_ptc_pipe(int p) {
     }
 }
 
+/*
+ * Function: Close_ctp_pipe
+ * -------------------
+ *   This function is used to close the pipes from child to parent
+ *
+ *   Parameters:
+ *      p: the number of the processor which we do not want to close its pipe
+ *
+ *   Returns:
+ *      void
+ */
+
 void close_ctp_pipe(int p) {
     int i;
     for (i = 0; i < processor_number_limit * 2; ++i) {
         if (i/2 != p)
             close(child_to_parent[i]);
+    }
+}
+
+/*
+ * Function: Init_select
+ * -------------------
+ *   This function is used to prepare select function for pipe in different processors
+ *
+ *   Parameters:
+ *      no parameters
+ *
+ *   Returns:
+ *      void
+ */
+
+void init_select(void) {
+    int i;
+    FD_ZERO(&rfds);
+    for (i = 0; i < processor_number_limit; ++i) {
+        FD_SET(child_to_parent[i * 2], &rfds);
     }
 }
 
@@ -211,6 +256,7 @@ void clean_up(void) {               /* Always remember to free all and close fil
 
 int main(int argc, char *argv[]) {
     int i;
+    int cnt_rr = 0;                 /* Counter for round robin */
 
     out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
 
@@ -232,6 +278,7 @@ int main(int argc, char *argv[]) {
 
     get_schedule();                 /* Get scheduling algorithm */
     init_pipe();                    /* Initialize pipe */
+    init_select();                  /* Initialize select */
 
     enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
     dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
@@ -248,23 +295,31 @@ int main(int argc, char *argv[]) {
                 main_flag = 1;                      /* Exit non-zero value */
                 break;                              /* Break and still need to wait for all child processes */
             }
-        }
+        } else
+            processor_number_now = processor_number_limit;
 
         if (pid != 0) {                             /* If fork successful and is in parent process */
+            get_time();
             if (processor_number_now < processor_number_limit) {
                 *(pid_array + processor_number_now) = (int)pid;
                 //printf("@@@@@@@@@@@@@@@@@@@ parent add new pid: %d number: %d\n", (int)pid, processor_number_now);
-                get_time();
                 printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + processor_number_now), enc_txt);
                 write(parent_to_child[processor_number_now * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
                 write(parent_to_child[processor_number_now * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
                 //printf("<<<<<<<<<<<<<<<<<<< write:%s number: %d\n", enc_txt, processor_number_now);
             } else {
-                get_time();
-                printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array), enc_txt);
-                write(parent_to_child[1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
-                write(parent_to_child[1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
-                //printf("<<<<<<<<<<<<<<<<<<< write:%s number: %d\n", enc_txt, 0);
+                if (schedule_flag == 0) {                   /* Round robin scheduling algorithm */
+                    //printf("<<<<<<<<<<<<<<<<<<< write:%s number: %d\n", enc_txt, cnt_rr);
+                    printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + cnt_rr), enc_txt);
+                    write(parent_to_child[cnt_rr * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
+                    write(parent_to_child[cnt_rr * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
+                    //printf("<<<<<<<<<<<<<<<<<<< write:%s number: %d\n", enc_txt, 0);
+                    cnt_rr++;                               /* Update counter of round robin */
+                    if (cnt_rr == processor_number_limit)
+                        cnt_rr = 0;
+                } else {
+
+                }
             }
         }
 
@@ -283,11 +338,10 @@ int main(int argc, char *argv[]) {
                 read(parent_to_child[processor_number_now * 2], &dec_txt, sizeof(char) * FILE_MAXLENGTH);
                 //printf(">>>>>>>>>>>>>>>>>>> read:%s number: %d\n", enc_txt, processor_number_now);
                 state = decrypt(enc_txt, dec_txt);
-                if (state == 0) {                       /* If child process exit without error */
-                    //printf("[%s] Decryption of %s complete. Process ID #%d Exiting.\n", out_time, enc_txt, getpid());
+                if (state == 1) break;
+                if (state == 0) {                       /* If child process is ready to decrypt another file */
                     write(child_to_parent[processor_number_now * 2 + 1], &state, sizeof(int));
                 }
-                if (state == 1) break;
             }
 
             clean_up();                             /* Always remember to free all and close file pointer! */
@@ -299,11 +353,11 @@ int main(int argc, char *argv[]) {
 
     close_ptc_pipe(processor_number_limit);
 
-    for (i = 0; i < processor_number_limit; i++) {                   /* Parent process wait for all child processes before exit */
+    for (i = 0; i < processor_number_limit; i++) {                      /* Parent process wait for all child processes before exit */
         int state;
-        pid_t pid = wait(&state);                     /* Wait until found one child process finished */
+        pid_t pid = wait(&state);                                       /* Wait until found one child process finished */
         get_time();
-        if (state != 0) {                           /* If child process terminate unexpectly! */
+        if (state != 0) {                                               /* If child process terminate unexpectly! */
             printf("[%s] Child process ID #%d did not terminate successfully.\n", out_time, (int)pid);
         }
     }
