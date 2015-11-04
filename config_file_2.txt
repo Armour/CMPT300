@@ -1,0 +1,12 @@
+   fcfs
+./encrypted_tweets.txt ./decrypted_tweets.txt
+/Users/armour/more_tweets.txt /Users/armour/output.txt
+./data/t2-et-Assignment-Example.txt ./data/t2output
+./data/t4-et-Empty-File.txt ./data/t4output
+./data/t5-et-Single-Tweet-1-char.txt ./data/t5output
+./data/t6-et-Single-Tweet-20-chars.txt ./data/t6output
+./data/fuckingstupid.php ./data/2333.txt
+./data/t7-et-Single-Tweet-139-chars.txt ./data/t7output
+./data/t8-et-Single-Tweet-140-chars.txt ./data/t8output
+./data/t9-et-File-with-10-tweets.txt ./data/t9output
+./data/t10-et-File-with-10000-tweets.txt ./data/t10output

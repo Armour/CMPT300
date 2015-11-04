@@ -42,6 +42,7 @@ int *child_to_parent;           /* Pipe that used to transmit messagee from chil
 int *pid_array;                 /* Used to store all the child pid */
 fd_set rfds;                    /* The set of file descriptor */
 struct timeval tv;              /* Time interval used on select function */
+int max_descriptor;             /* The max number of file descriptor */
 
 /*
  * Function: Get_time
@@ -158,10 +159,14 @@ void close_ctp_pipe(int p) {
 
 void init_select(void) {
     int i;
+    int max = 0;
     FD_ZERO(&rfds);
     for (i = 0; i < processor_number_limit; ++i) {
         FD_SET(child_to_parent[i * 2], &rfds);
+        if (child_to_parent[i * 2] > max)
+            max = child_to_parent[i * 2];
     }
+    max_descriptor = max;
 }
 
 /*
@@ -317,8 +322,28 @@ int main(int argc, char *argv[]) {
                     cnt_rr++;                               /* Update counter of round robin */
                     if (cnt_rr == processor_number_limit)
                         cnt_rr = 0;
-                } else {
+                } else {                                    /* First come first serve scheduling algorithm */
+                    int state = select(max_descriptor + 1, &rfds, NULL, NULL, NULL);
+                    printf("FCFS: %d\n", state);
+                    if (state == -1) {
 
+                    } else if (state) {
+                        for (i = 0; i < processor_number_limit; ++i) {
+                            if (FD_ISSET(child_to_parent[i * 2], &rfds)) {
+                                int tmp;
+                                printf("Processor %d can be use\n", i);
+                                if (read(child_to_parent[i * 2], &tmp, sizeof(int))) {
+                                    printf("Read data: %d\n", tmp);
+                                    printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + i), enc_txt);
+                                    write(parent_to_child[i * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
+                                    write(parent_to_child[i * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
+                                }
+                                break;
+                            }
+                        }
+                    } else {
+
+                    }
                 }
             }
         }
@@ -340,7 +365,7 @@ int main(int argc, char *argv[]) {
                 state = decrypt(enc_txt, dec_txt);
                 if (state == 1) break;
                 if (state == 0) {                       /* If child process is ready to decrypt another file */
-                    write(child_to_parent[processor_number_now * 2 + 1], &state, sizeof(int));
+                    write(child_to_parent[processor_number_now * 2 + 1], &processor_number_now, sizeof(int));
                 }
             }
 
