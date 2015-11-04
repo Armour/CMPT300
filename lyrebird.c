@@ -251,21 +251,20 @@ int main(int argc, char *argv[]) {
         }
 
         if (pid != 0) {                             /* If fork successful and is in parent process */
-            get_time();
             if (processor_number_now < processor_number_limit) {
-                if (!(*(pid_array + processor_number_now))) {
-                    *(pid_array + processor_number_now) = (int)pid;
-                    printf("@@@@@@@@@@@@@@@@@@@ parent add new pid: %d number: %d\n", (int)pid, processor_number_now);
-                }
-                printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, (int)pid, enc_txt);
+                *(pid_array + processor_number_now) = (int)pid;
+                //printf("@@@@@@@@@@@@@@@@@@@ parent add new pid: %d number: %d\n", (int)pid, processor_number_now);
+                get_time();
+                printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + processor_number_now), enc_txt);
                 write(parent_to_child[processor_number_now * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
                 write(parent_to_child[processor_number_now * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
-                printf("<<<<<<<<<<<<<<<<<<< write:%s number: %d\n", enc_txt, processor_number_now);
+                //printf("<<<<<<<<<<<<<<<<<<< write:%s number: %d\n", enc_txt, processor_number_now);
             } else {
+                get_time();
                 printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array), enc_txt);
                 write(parent_to_child[1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
                 write(parent_to_child[1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
-                printf("<<<<<<<<<<<<<<<<<<< write:%s number: %d\n", enc_txt, 0);
+                //printf("<<<<<<<<<<<<<<<<<<< write:%s number: %d\n", enc_txt, 0);
             }
         }
 
@@ -273,27 +272,32 @@ int main(int argc, char *argv[]) {
             int state = 0;
             char enc_txt[FILE_MAXLENGTH];
             char dec_txt[FILE_MAXLENGTH];
+
+            close_ptc_pipe(processor_number_now);       /* Close other pipes except used ptc and ctp */
+            close_ctp_pipe(processor_number_now);
+            close(parent_to_child[processor_number_now * 2 + 1]);
+            close(child_to_parent[processor_number_now * 2]);
+
             while (1) {
-                read(parent_to_child[processor_number_now * 2], &enc_txt, sizeof(char) * FILE_MAXLENGTH);
+                if (read(parent_to_child[processor_number_now * 2], &enc_txt, sizeof(char) * FILE_MAXLENGTH) == 0) break;
                 read(parent_to_child[processor_number_now * 2], &dec_txt, sizeof(char) * FILE_MAXLENGTH);
-                printf(">>>>>>>>>>>>>>>>>>> read:%s number: %d\n", enc_txt, processor_number_now);
-                if (strcmp(enc_txt, "Exit!Armour!\0") == 0) break;
+                //printf(">>>>>>>>>>>>>>>>>>> read:%s number: %d\n", enc_txt, processor_number_now);
                 state = decrypt(enc_txt, dec_txt);
-                get_time();
                 if (state == 0) {                       /* If child process exit without error */
-                    printf("[%s] Decryption of %s complete. Process ID #%d Exiting.\n", out_time, enc_txt, getpid());
+                    //printf("[%s] Decryption of %s complete. Process ID #%d Exiting.\n", out_time, enc_txt, getpid());
+                    write(child_to_parent[processor_number_now * 2 + 1], &state, sizeof(int));
                 }
+                if (state == 1) break;
             }
+
             clean_up();                             /* Always remember to free all and close file pointer! */
-            write(child_to_parent[processor_number_now * 2 + 1], "x", sizeof(char));
+            close(parent_to_child[processor_number_now * 2]);           /* Close used pipes */
+            close(child_to_parent[processor_number_now * 2 + 1]);
             exit(state);
         }
     }
 
-    for (i = 0; i < processor_number_limit; i++) {
-        write(parent_to_child[i * 2 + 1], "Exit!Armour!\0", sizeof(char) * FILE_MAXLENGTH);
-        write(parent_to_child[i * 2 + 1], "Exit!Armour!\0", sizeof(char) * FILE_MAXLENGTH);
-    }
+    close_ptc_pipe(processor_number_limit);
 
     for (i = 0; i < processor_number_limit; i++) {                   /* Parent process wait for all child processes before exit */
         int state;
@@ -303,6 +307,8 @@ int main(int argc, char *argv[]) {
             printf("[%s] Child process ID #%d did not terminate successfully.\n", out_time, (int)pid);
         }
     }
+
+    close_ctp_pipe(processor_number_limit);
 
     clean_up();                                     /* Always remember to free all and close file pointer! */
     return main_flag;
