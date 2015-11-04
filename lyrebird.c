@@ -283,7 +283,6 @@ int main(int argc, char *argv[]) {
 
     get_schedule();                 /* Get scheduling algorithm */
     init_pipe();                    /* Initialize pipe */
-    init_select();                  /* Initialize select */
 
     enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
     dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
@@ -323,17 +322,17 @@ int main(int argc, char *argv[]) {
                     if (cnt_rr == processor_number_limit)
                         cnt_rr = 0;
                 } else {                                    /* First come first serve scheduling algorithm */
+                    init_select();
                     int state = select(max_descriptor + 1, &rfds, NULL, NULL, NULL);
-                    printf("FCFS: %d\n", state);
+                    //printf("FCFS: %d\n", state);
                     if (state == -1) {
 
                     } else if (state) {
                         for (i = 0; i < processor_number_limit; ++i) {
                             if (FD_ISSET(child_to_parent[i * 2], &rfds)) {
                                 int tmp;
-                                printf("Processor %d can be use\n", i);
+                                //printf("Select!!!!! %d\n", i);
                                 if (read(child_to_parent[i * 2], &tmp, sizeof(int))) {
-                                    printf("Read data: %d\n", tmp);
                                     printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + i), enc_txt);
                                     write(parent_to_child[i * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
                                     write(parent_to_child[i * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
@@ -366,6 +365,7 @@ int main(int argc, char *argv[]) {
                 if (state == 1) break;
                 if (state == 0) {                       /* If child process is ready to decrypt another file */
                     write(child_to_parent[processor_number_now * 2 + 1], &processor_number_now, sizeof(int));
+                    //printf("Ready!!!!! : %d\n", processor_number_now);
                 }
             }
 

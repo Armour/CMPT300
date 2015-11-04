@@ -158,23 +158,21 @@ int decrypt(char *input, char *output) {
     tweets_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
 
     fin = fopen(input, "r");
-    fout = fopen(output, "w+");
 
     if (fin == NULL) {                              /* Check input file is exist or not */
         get_tweets_time();                          /* Print error message in child process */
         printf("[%s] Child process ID #%d encounter error: Error when opening file %s, input file not exist!\n", tweets_time, getpid(), input);
         free(tweets_time);
-        fclose(fin);
-        fclose(fout);
         return 0;
     }
+
+    fout = fopen(output, "w+");
 
     if (fout == NULL) {                             /* Check if output file opened successfully */
         get_tweets_time();                          /* Print error message in child process */
         printf("[%s] Child process ID #%d encounter error: Error when opening file %s, output file create failed!\n", tweets_time, getpid(), input);
         free(tweets_time);
         fclose(fin);
-        fclose(fout);
         return 0;
     }
 
