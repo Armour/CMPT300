@@ -74,7 +74,7 @@ char *decrypt_each(char *tweets_enc) {
     tweets_dec = (char *)malloc(sizeof(char) * TWEETS_MAX_LENGTH);
     if (tweets_dec == NULL) {                   /* Failed on alloc */
         get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] Child process ID #%d encountered an error: Malloc failed! Process exit.\n", tweets_time, getpid());
+        printf("[%s] Child process ID #%d encountered an error: Malloc failed!\n", tweets_time, getpid());
         flag = 1;
         return tweets_dec;
     }
@@ -94,7 +94,7 @@ char *decrypt_each(char *tweets_enc) {
     cipher_number = (unsigned long long *)malloc(sizeof(unsigned long long) * num_len);
     if (cipher_number == NULL) {                /* Failed on alloc */
         get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] Child process ID #%d encountered an error: Malloc failed! Process exit.\n", tweets_time, getpid());
+        printf("[%s] Child process ID #%d encountered an error: Malloc failed!\n", tweets_time, getpid());
         flag = 1;
         return tweets_dec;
     }
@@ -107,7 +107,7 @@ char *decrypt_each(char *tweets_enc) {
     ptext_number = (unsigned long long *)malloc(sizeof(unsigned long long) * num_len);
     if (ptext_number == NULL) {                 /* Failed on alloc */
         get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] Child process ID #%d encountered an error: Malloc failed! Process exit.\n", tweets_time, getpid());
+        printf("[%s] Child process ID #%d encountered an error: Malloc failed!\n", tweets_time, getpid());
         flag = 1;
         return tweets_dec;
     }
@@ -120,7 +120,7 @@ char *decrypt_each(char *tweets_enc) {
     group_char = (char *)malloc(sizeof(char) * CONSTANT_MULTIPLE);
     if (group_char == NULL) {                   /* Failed on alloc */
         get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] Child process ID #%d encountered an error: Malloc failed! Process exit.\n", tweets_time, getpid());
+        printf("[%s] Child process ID #%d encountered an error: Malloc failed!\n", tweets_time, getpid());
         flag = 1;
         return tweets_dec;
     }
@@ -170,7 +170,7 @@ int decrypt(char *input, char *output) {
 
     if (fout == NULL) {                             /* Check if output file opened successfully */
         get_tweets_time();                          /* Print error message in child process */
-        printf("[%s] Child process ID #%d encounter error: Error when opening file %s, output file create failed!\n", tweets_time, getpid(), input);
+        printf("[%s] Child process ID #%d encounter error: Error when opening file %s, output file creation failed!\n", tweets_time, getpid(), input);
         free(tweets_time);
         fclose(fin);
         return 0;

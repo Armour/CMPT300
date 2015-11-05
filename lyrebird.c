@@ -24,8 +24,6 @@
 #include "memwatch.h"
 #include "time.h"
 
-#define PROCESSOR_MAX_NUMBER sysconf(_SC_NPROCESSORS_ONLN) - 1
-
 FILE *fp;                       /* The file pointer that used to open config file */
 char *enc_txt;                  /* Used to store encrypted file name */
 char *dec_txt;                  /* Used to store decrypted file name */
@@ -34,12 +32,16 @@ int main_flag = 0;              /* Used to store return value for main function 
 int schedule_flag = 0;          /* Flag equls to 0 means using 'round robin' scheduling algorithm,
                                    flag equls to 1 means using 'first come first served' scheduling algorithm,
                                    default 0 */
+int cnt_rr = 0;                 /* Counter for round robin, value means which processor is the one that we want to assign task */
+
 pid_t pid;                      /* Used to store fork pid */
+int *pid_array;                 /* Used to store all the child pid (as int) */
 int processor_number_limit;     /* The max number of processors that can use now */
 int processor_number_now = -1;  /* The number of processors that already been used now */
+
 int *parent_to_child;           /* Pipe that used to transmit messagee from parent processor to child processor */
 int *child_to_parent;           /* Pipe that used to transmit messagee from child processor to parent processor */
-int *pid_array;                 /* Used to store all the child pid */
+
 fd_set rfds;                    /* The set of file descriptor */
 struct timeval tv;              /* Time interval used on select function */
 int max_descriptor;             /* The max number of file descriptor */
@@ -78,24 +80,50 @@ void get_time(void) {
 
 void init_pipe(void) {
     int i;
-    processor_number_limit = PROCESSOR_MAX_NUMBER;
+    processor_number_limit = PROCESSOR_MAX_NUMBER;                      /* Max number of processors for this machine */
+
     parent_to_child = (int *)malloc(sizeof(int) * processor_number_limit * 2);
+    if (parent_to_child == NULL) {
+        get_time();
+        printf("[%s] (Processor ID #%d) ERROR: Malloc parent_to_child failed!\n", out_time, getpid());
+        free(out_time);
+        exit(1);
+    }
+
     child_to_parent = (int *)malloc(sizeof(int) * processor_number_limit * 2);
+    if (child_to_parent == NULL) {
+        get_time();
+        printf("[%s] (Processor ID #%d) ERROR: Malloc child_to_parent failed!\n", out_time, getpid());
+        free(out_time);
+        free(parent_to_child);
+        exit(1);
+    }
+
     pid_array = (int *)malloc(sizeof(int) * processor_number_limit);
+    if (pid_array == NULL) {
+        get_time();
+        printf("[%s] (Processor ID #%d) ERROR: Malloc pid_array failed!\n", out_time, getpid());
+        free(out_time);
+        free(parent_to_child);
+        free(child_to_parent);
+        exit(1);
+    }
+
     memset(pid_array, 0, sizeof(int) * processor_number_limit);
+
     for (i = 0; i < processor_number_limit; ++i) {
-        if (pipe(parent_to_child + i * 2)) {                            /* Create pipe! */
+        if (pipe(parent_to_child + i * 2)) {                            /* Create pipe from parent to child */
             get_time();
-            printf("[%s] Create parent to child pipe #%d failed! Exit!\n", out_time, i);
+            printf("[%s] (Processor ID #%d) ERROR: Create parent to child pipe number %d failed!\n", out_time, getpid(), i);
             free(out_time);
             free(parent_to_child);
             free(child_to_parent);
             free(pid_array);
             exit(1);                                                    /* If create pipe failed */
         }
-        if (pipe(child_to_parent + i * 2)) {                            /* Create pipe! */
+        if (pipe(child_to_parent + i * 2)) {                            /* Create pipe from child to parent */
             get_time();
-            printf("[%s] Create child to parent pipe #%d failed! Exit\n", out_time, i);
+            printf("[%s] (Processor ID #%d) ERROR: Create child to parent pipe number %d failed!\n", out_time, getpid(), i);
             free(out_time);
             free(parent_to_child);
             free(child_to_parent);
@@ -119,7 +147,7 @@ void init_pipe(void) {
 
 void close_ptc_pipe(int p) {
     int i;
-    for (i = 0; i < processor_number_limit * 2; ++i) {
+    for (i = 0; i < processor_number_limit * 2; ++i) {                  /* Close each pipe from parent to child except processor p */
         if (i/2 != p)
             close(parent_to_child[i]);
     }
@@ -139,7 +167,7 @@ void close_ptc_pipe(int p) {
 
 void close_ctp_pipe(int p) {
     int i;
-    for (i = 0; i < processor_number_limit * 2; ++i) {
+    for (i = 0; i < processor_number_limit * 2; ++i) {                  /* Close each pipe from child to parent except processor p  */
         if (i/2 != p)
             close(child_to_parent[i]);
     }
@@ -160,11 +188,11 @@ void close_ctp_pipe(int p) {
 void init_select(void) {
     int i;
     int max = 0;
-    FD_ZERO(&rfds);
+    FD_ZERO(&rfds);                                             /* First initialize set to empty */
     for (i = 0; i < processor_number_limit; ++i) {
-        FD_SET(child_to_parent[i * 2], &rfds);
+        FD_SET(child_to_parent[i * 2], &rfds);                  /* Add file descriptor to set */
         if (child_to_parent[i * 2] > max)
-            max = child_to_parent[i * 2];
+            max = child_to_parent[i * 2];                       /* Calculate max file descriptor */
     }
     max_descriptor = max;
 }
@@ -208,9 +236,10 @@ char *trim_space(char *str) {
 void get_schedule(void) {
     char *schedule;
     size_t len;
-    size_t read = getline(&schedule, &len, fp);             /* Get first line input */
-    if ((int)read == -1) {                                  /* If this is an empty file */
-        printf("Empty file! No scheduling algorithm specify!\n");
+    size_t read = getline(&schedule, &len, fp);                         /* Get first line input */
+    if ((int)read == -1) {                                              /* If this is an empty file */
+        get_time();
+        printf("[%s] (Processor ID #%d) ERROR: Empty file! Scheduling algorithm not found!\n", out_time, getpid());
         free(out_time);
         exit(1);
     } else if (!strcmp(trim_space(schedule), "round robin")) {          /* If first line equals to 'round robin' */
@@ -218,7 +247,8 @@ void get_schedule(void) {
     } else if (!strcmp(trim_space(schedule), "fcfs")) {                 /* If first line equals to 'fcfs' */
         schedule_flag = 1;
     } else {                                                            /* If is other incorrect string */
-        printf("This scheduling algorithm is not right!\n");
+        get_time();
+        printf("[%s] (Processor ID #%d) ERROR: I don't know this scheduling algorithm! :C\n", out_time, getpid());
         free(out_time);
         exit(1);
     }
@@ -261,22 +291,21 @@ void clean_up(void) {               /* Always remember to free all and close fil
 
 int main(int argc, char *argv[]) {
     int i;
-    int cnt_rr = 0;                 /* Counter for round robin */
 
     out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
 
     if (argc != 2) {                /* Check if the arguments number is right or not */
         get_time();
-        printf("[%s] (#%d) Arguments number is not right! Usage: ./lyrebird config_file_name_here.txt\n", out_time, getpid());
+        printf("[%s] (Processor ID #%d) Arguments number is not right! Usage: ./lyrebird config_file_name_here.txt\n", out_time, getpid());
         free(out_time);
         return 1;
     }
 
     fp = fopen(argv[1], "r+");      /* Input config file */
 
-    if (!fp) {                      /* Check if the input file is exist or not */
+    if (fp == NULL) {               /* Check if the input file is exist or not */
         get_time();
-        printf("[%s] (#%d) Error when opening file %s, input file not exist!\n", out_time, getpid(), argv[1]);
+        printf("[%s] (Processor ID #%d) ERROR: Input file %s not exist!\n", out_time, getpid(), argv[1]);
         free(out_time);
         return 1;
     }
@@ -287,108 +316,114 @@ int main(int argc, char *argv[]) {
     enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
     dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
 
-    while (fscanf(fp, "%s", enc_txt) != EOF) {      /* Read until end of file */
+    while (fscanf(fp, "%s", enc_txt) != EOF) {              /* Read until end of file */
         fscanf(fp, "%s", dec_txt);
 
-        if (processor_number_now + 1 < processor_number_limit) {        /* If not exceed the max number of processor */
+        if (processor_number_now + 1 < processor_number_limit) {            /* If not exceed the max number of processor */
             processor_number_now++;
-            pid = fork();                           /* Fork! */
-            if (pid < 0) {                          /* If fork failed */
+            pid = fork();                                   /* Fork! */
+            if (pid < 0) {                                  /* If fork failed */
                 get_time();
-                printf("[%s] Fork failed in create new process #%d!\n", out_time, getpid());
-                main_flag = 1;                      /* Exit non-zero value */
-                break;                              /* Break and still need to wait for all child processes */
+                printf("[%s] (Processor ID #%d) ERROR: Fork failed!\n", out_time, getpid());
+                main_flag = 1;                              /* Exit non-zero value */
+                break;                                      /* Break and still need to wait for all child processes */
             }
         } else
             processor_number_now = processor_number_limit;
 
-        if (pid != 0) {                             /* If fork successful and is in parent process */
-            get_time();
+        if (pid != 0) {                                     /* If fork successful and is in parent process */
             if (processor_number_now < processor_number_limit) {
-                *(pid_array + processor_number_now) = (int)pid;
-                //printf("@@@@@@@@@@@@@@@@@@@ parent add new pid: %d number: %d\n", (int)pid, processor_number_now);
+                pid_array[processor_number_now] = (int)pid;             /* Store child pid into array */
+                close(parent_to_child[processor_number_now * 2]);
+                close(child_to_parent[processor_number_now * 2 + 1]);
+                get_time();
                 printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + processor_number_now), enc_txt);
                 write(parent_to_child[processor_number_now * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
                 write(parent_to_child[processor_number_now * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
-                //printf("<<<<<<<<<<<<<<<<<<< write:%s number: %d\n", enc_txt, processor_number_now);
             } else {
                 if (schedule_flag == 0) {                   /* Round robin scheduling algorithm */
-                    //printf("<<<<<<<<<<<<<<<<<<< write:%s number: %d\n", enc_txt, cnt_rr);
+                    get_time();
                     printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + cnt_rr), enc_txt);
                     write(parent_to_child[cnt_rr * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
                     write(parent_to_child[cnt_rr * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
-                    //printf("<<<<<<<<<<<<<<<<<<< write:%s number: %d\n", enc_txt, 0);
                     cnt_rr++;                               /* Update counter of round robin */
                     if (cnt_rr == processor_number_limit)
                         cnt_rr = 0;
                 } else {                                    /* First come first serve scheduling algorithm */
                     init_select();
                     int state = select(max_descriptor + 1, &rfds, NULL, NULL, NULL);
-                    //printf("FCFS: %d\n", state);
-                    if (state == -1) {
-
-                    } else if (state) {
+                    if (state == -1) {                      /* If select function failed */
+                        get_time();
+                        printf("[%s] (Processor ID #%d) ERROR: Select function failed, return -1.\n", out_time, getpid());
+                        main_flag = 1;
+                        break;
+                    } else if (state) {                     /* If select is OK */
                         for (i = 0; i < processor_number_limit; ++i) {
                             if (FD_ISSET(child_to_parent[i * 2], &rfds)) {
                                 int tmp;
-                                //printf("Select!!!!! %d\n", i);
-                                if (read(child_to_parent[i * 2], &tmp, sizeof(int))) {
-                                    printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + i), enc_txt);
-                                    write(parent_to_child[i * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
-                                    write(parent_to_child[i * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
-                                }
+                                read(child_to_parent[i * 2], &tmp, sizeof(int));
+                                get_time();
+                                printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + i), enc_txt);
+                                write(parent_to_child[i * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
+                                write(parent_to_child[i * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
                                 break;
                             }
                         }
-                    } else {
-
+                    } else {                                /* If select function time-out */
+                        get_time();
+                        printf("[%s] (Processor ID #%d) ERROR: Select function time-out, return 0.\n", out_time, getpid());
+                        main_flag = 1;
+                        break;
                     }
                 }
             }
         }
 
-        if (pid == 0) {                             /* If in child process */
+        if (pid == 0) {                                     /* If in child process */
             int state = 0;
             char enc_txt[FILE_MAXLENGTH];
             char dec_txt[FILE_MAXLENGTH];
 
-            close_ptc_pipe(processor_number_now);       /* Close other pipes except used ptc and ctp */
+            close_ptc_pipe(processor_number_now);           /* Close other pipes except used ptc and ctp */
             close_ctp_pipe(processor_number_now);
             close(parent_to_child[processor_number_now * 2 + 1]);
             close(child_to_parent[processor_number_now * 2]);
 
             while (1) {
-                if (read(parent_to_child[processor_number_now * 2], &enc_txt, sizeof(char) * FILE_MAXLENGTH) == 0) break;
+                if (read(parent_to_child[processor_number_now * 2], &enc_txt, sizeof(char) * FILE_MAXLENGTH) == 0) break;       /* Read until parent pipe closed */
                 read(parent_to_child[processor_number_now * 2], &dec_txt, sizeof(char) * FILE_MAXLENGTH);
-                //printf(">>>>>>>>>>>>>>>>>>> read:%s number: %d\n", enc_txt, processor_number_now);
                 state = decrypt(enc_txt, dec_txt);
-                if (state == 1) break;
-                if (state == 0) {                       /* If child process is ready to decrypt another file */
+                if (state == 1) break;                      /* If child decryption meet an fatal error */
+                if (state == 0) {                           /* If child process is ready to decrypt another file */
                     write(child_to_parent[processor_number_now * 2 + 1], &processor_number_now, sizeof(int));
-                    //printf("Ready!!!!! : %d\n", processor_number_now);
                 }
             }
 
-            clean_up();                             /* Always remember to free all and close file pointer! */
+            clean_up();                                     /* Always remember to free all and close file pointer! */
             close(parent_to_child[processor_number_now * 2]);           /* Close used pipes */
             close(child_to_parent[processor_number_now * 2 + 1]);
             exit(state);
         }
     }
 
-    close_ptc_pipe(processor_number_limit);
+    close_ptc_pipe(processor_number_limit);                 /* Close all parent to child pipes */
 
-    for (i = 0; i < processor_number_limit; i++) {                      /* Parent process wait for all child processes before exit */
+    for (i = 0; i < processor_number_limit; i++) {          /* Read all remaining message in child processors */
+        int tmp;
+        while (read(child_to_parent[i * 2], &tmp, sizeof(int)));
+    }
+
+    for (i = 0; i < processor_number_limit; i++) {          /* Parent process wait for all child processes before exit */
         int state;
-        pid_t pid = wait(&state);                                       /* Wait until found one child process finished */
+        pid_t pid = wait(&state);                           /* Wait until found one child process finished */
         get_time();
-        if (state != 0) {                                               /* If child process terminate unexpectly! */
+        if (state != 0) {                                   /* If child process terminate unexpectly! */
             printf("[%s] Child process ID #%d did not terminate successfully.\n", out_time, (int)pid);
         }
     }
 
-    close_ctp_pipe(processor_number_limit);
+    close_ctp_pipe(processor_number_limit);                 /* Close all child to parent pipes */
 
-    clean_up();                                     /* Always remember to free all and close file pointer! */
+    clean_up();                                             /* Always remember to free all and close file pointer! */
     return main_flag;
 }
