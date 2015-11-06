@@ -24,6 +24,9 @@
 
 #define TIME_MAXLENGTH 50
 
+/* Get current time in specify format */
+void get_tweets_time(void);
+
 /* Decrypt each tweet through 4 steps */
 char *decrypt_each(char *tweet);
 

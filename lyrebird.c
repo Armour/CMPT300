@@ -290,7 +290,7 @@ void clean_up(void) {               /* Always remember to free all and close fil
  */
 
 int main(int argc, char *argv[]) {
-    int i;
+    int i, j;
 
     out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
 
@@ -341,7 +341,7 @@ int main(int argc, char *argv[]) {
                 write(parent_to_child[processor_number_now * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
                 write(parent_to_child[processor_number_now * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
             } else {
-                if (schedule_flag == 0) {                   /* Round robin scheduling algorithm */
+                if (schedule_flag == 0) {                   /* "Round robin" scheduling algorithm */
                     get_time();
                     printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + cnt_rr), enc_txt);
                     write(parent_to_child[cnt_rr * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
@@ -349,31 +349,34 @@ int main(int argc, char *argv[]) {
                     cnt_rr++;                               /* Update counter of round robin */
                     if (cnt_rr == processor_number_limit)
                         cnt_rr = 0;
-                } else {                                    /* First come first serve scheduling algorithm */
+                } else {                                    /* "First come first serve" scheduling algorithm */
                     init_select();
                     int state = select(max_descriptor + 1, &rfds, NULL, NULL, NULL);
                     if (state == -1) {                      /* If select function failed */
                         get_time();
-                        printf("[%s] (Processor ID #%d) ERROR: Select function failed, return -1.\n", out_time, getpid());
+                        printf("[%s] (Processor ID #%d) ERROR: Select function failed, it returned -1.\n", out_time, getpid());
                         main_flag = 1;
                         break;
                     } else if (state) {                     /* If select is OK */
                         for (i = 0; i < processor_number_limit; ++i) {
                             if (FD_ISSET(child_to_parent[i * 2], &rfds)) {
-                                int tmp;
-                                read(child_to_parent[i * 2], &tmp, sizeof(int));
-                                get_time();
-                                printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + i), enc_txt);
-                                write(parent_to_child[i * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
-                                write(parent_to_child[i * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
-                                break;
+                                int message;
+                                read(child_to_parent[i * 2], &message, sizeof(int));
+                                if (message == i) {                     /* If message from child processor shows it is ready */
+                                    get_time();
+                                    printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + i), enc_txt);
+                                    write(parent_to_child[i * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
+                                    write(parent_to_child[i * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
+                                    break;
+                                } else {                                /* If message is not right */
+                                    get_time();
+                                    printf("[%s] (Processor ID #%d) ERROR: Wrong message has been read from pipe after select.\n", out_time, getpid());
+                                    main_flag = 1;
+                                    break;
+                                }
                             }
                         }
-                    } else {                                /* If select function time-out */
-                        get_time();
-                        printf("[%s] (Processor ID #%d) ERROR: Select function time-out, return 0.\n", out_time, getpid());
-                        main_flag = 1;
-                        break;
+                        if (main_flag) break;
                     }
                 }
             }
@@ -409,20 +412,24 @@ int main(int argc, char *argv[]) {
     close_ptc_pipe(processor_number_limit);                 /* Close all parent to child pipes */
 
     for (i = 0; i < processor_number_limit; i++) {          /* Read all remaining message in child processors */
-        int tmp;
-        while (read(child_to_parent[i * 2], &tmp, sizeof(int)));
+        int message;
+        while (read(child_to_parent[i * 2], &message, sizeof(int)));
     }
 
     for (i = 0; i < processor_number_limit; i++) {          /* Parent process wait for all child processes before exit */
         int state;
         pid_t pid = wait(&state);                           /* Wait until found one child process finished */
-        get_time();
+        for (j = 0; j < processor_number_limit; j++) {
+            if (pid_array[j] == pid) {
+                close(child_to_parent[2 * j]);              /* Close the pipe that uses to read messages from exited child processor */
+                break;
+            }
+        }
         if (state != 0) {                                   /* If child process terminate unexpectly! */
+            get_time();
             printf("[%s] Child process ID #%d did not terminate successfully.\n", out_time, (int)pid);
         }
     }
-
-    close_ctp_pipe(processor_number_limit);                 /* Close all child to parent pipes */
 
     clean_up();                                             /* Always remember to free all and close file pointer! */
     return main_flag;

@@ -72,9 +72,9 @@ char *decrypt_each(char *tweets_enc) {
     int num_len;
 
     tweets_dec = (char *)malloc(sizeof(char) * TWEETS_MAX_LENGTH);
-    if (tweets_dec == NULL) {                   /* Failed on alloc */
+    if (tweets_dec == NULL) {                   /* Failed on malloc */
         get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] Child process ID #%d encountered an error: Malloc failed!\n", tweets_time, getpid());
+        printf("[%s] (Processor ID #%d) ERROR: Malloc tweets_dec failed!\n", tweets_time, getpid());
         flag = 1;
         return tweets_dec;
     }
@@ -84,7 +84,7 @@ char *decrypt_each(char *tweets_enc) {
 
     if (len % CONSTANT_MULTIPLE != 0) {         /* Check if len is multiple of 6 */
         get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] Child process ID #%d encountered an error: There is a tweet that is not multiple of 6!\n", tweets_time, getpid());
+        printf("[%s] (Processor ID #%d) ERROR: There is a tweet that is not multiple of 6!\n", tweets_time, getpid());
         flag = 0;
         return tweets_dec;
     }
@@ -92,9 +92,9 @@ char *decrypt_each(char *tweets_enc) {
     /* Step 2: Transform each group of 6 characters into an integer using base 41 */
     num_len = len / CONSTANT_MULTIPLE;
     cipher_number = (unsigned long long *)malloc(sizeof(unsigned long long) * num_len);
-    if (cipher_number == NULL) {                /* Failed on alloc */
+    if (cipher_number == NULL) {                /* Failed on malloc */
         get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] Child process ID #%d encountered an error: Malloc failed!\n", tweets_time, getpid());
+        printf("[%s] (Processor ID #%d) ERROR: Malloc cipher_number failed!\n", tweets_time, getpid());
         flag = 1;
         return tweets_dec;
     }
@@ -105,9 +105,9 @@ char *decrypt_each(char *tweets_enc) {
 
     /* Step 3: Map each cipher number onto a similar plain-text number */
     ptext_number = (unsigned long long *)malloc(sizeof(unsigned long long) * num_len);
-    if (ptext_number == NULL) {                 /* Failed on alloc */
+    if (ptext_number == NULL) {                 /* Failed on malloc */
         get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] Child process ID #%d encountered an error: Malloc failed!\n", tweets_time, getpid());
+        printf("[%s] (Processor ID #%d) ERROR: Malloc ptext_number failed!\n", tweets_time, getpid());
         flag = 1;
         return tweets_dec;
     }
@@ -118,9 +118,9 @@ char *decrypt_each(char *tweets_enc) {
 
     /* Step 4: Get the final decrypted text by use the inverse function of Step 2 */
     group_char = (char *)malloc(sizeof(char) * CONSTANT_MULTIPLE);
-    if (group_char == NULL) {                   /* Failed on alloc */
+    if (group_char == NULL) {                   /* Failed on malloc */
         get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] Child process ID #%d encountered an error: Malloc failed!\n", tweets_time, getpid());
+        printf("[%s] (Processor ID #%d) ERROR: Malloc group_char failed!\n", tweets_time, getpid());
         flag = 1;
         return tweets_dec;
     }
@@ -156,12 +156,16 @@ int decrypt(char *input, char *output) {
     FILE *fin, *fout;
 
     tweets_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
+    if (tweets_time == NULL) {                      /* If malloc time string failed, can't output time anymore... */
+        printf("[XXX XXX 00 00:00:00 2015] (Processor ID #%d) ERROR: Malloc tweets_time failed!!!(Can't output time)\n", getpid());
+        return 0;
+    }
 
     fin = fopen(input, "r");
 
     if (fin == NULL) {                              /* Check input file is exist or not */
         get_tweets_time();                          /* Print error message in child process */
-        printf("[%s] Child process ID #%d encounter error: Error when opening file %s, input file not exist!\n", tweets_time, getpid(), input);
+        printf("[%s] (Processor ID #%d) ERROR: Input file %s not exist!\n", tweets_time, getpid(), input);
         free(tweets_time);
         return 0;
     }
@@ -170,7 +174,7 @@ int decrypt(char *input, char *output) {
 
     if (fout == NULL) {                             /* Check if output file opened successfully */
         get_tweets_time();                          /* Print error message in child process */
-        printf("[%s] Child process ID #%d encounter error: Error when opening file %s, output file creation failed!\n", tweets_time, getpid(), input);
+        printf("[%s] (Processor ID #%d) ERROR: Create output file %s failed!\n", tweets_time, getpid(), input);
         free(tweets_time);
         fclose(fin);
         return 0;
@@ -178,6 +182,13 @@ int decrypt(char *input, char *output) {
 
     while (!feof(fin)) {
         tweets_enc = input_line(fin, &len);             /* Get each line's tweet from input file */
+        if (tweets_enc == NULL) {
+            get_tweets_time();                          /* Print error message in child process */
+            printf("[%s] (Processor ID #%d) ERROR: Malloc tweets_enc string failed!\n", tweets_time, getpid());
+            free(tweets_time);
+            fclose(fin);
+            return 0;
+        }
         if (len != -1) {
             tweets_dec = decrypt_each(tweets_enc);      /* Decrypt each line's tweet */
             if (flag) {                                 /* If there is some unexpected problems, exit */

@@ -40,6 +40,9 @@ char *input_line(FILE *fin, int *len) {
     int i = 0;
 
     line = (char *)malloc(sizeof(char) * (TWEETS_MAX_LENGTH));
+    if (line == NULL) {                 /* If malloc error */
+        return line;
+    }
 
     c = fgetc(fin);
     while (c != EOF) {

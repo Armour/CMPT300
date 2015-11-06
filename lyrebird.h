@@ -25,8 +25,7 @@
 #include <unistd.h>
 
 #define FILE_MAXLENGTH 1030
-//#define PROCESSOR_MAX_NUMBER sysconf(_SC_NPROCESSORS_ONLN) - 1
-#define PROCESSOR_MAX_NUMBER 4 - 1
+#define PROCESSOR_MAX_NUMBER sysconf(_SC_NPROCESSORS_ONLN) - 1
 
 /* Used to get current time in specify format */
 void get_time(void);
