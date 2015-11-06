@@ -208,7 +208,7 @@ void close_ctp_pipe_with_pid(int pid) {
 
 void read_rmng_msg(void) {
     int i;
-    for (i = 0; i < processor_number_limit; i++) {          /* Read all remaining message in child processors */
+    for (i = 0; i < processor_number_now; i++) {          /* Read all remaining message in child processors */
         int message;
         while (read(child_to_parent[i * 2], &message, sizeof(int)));
     }
