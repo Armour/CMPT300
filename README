@@ -58,3 +58,8 @@ More Details can be found in [Assignment 2 - Process Management](https://courses
 * Close all pipes that do not need in each processors.
 * Empty data and largest data tested (used data set from assignment #2).
 
+## Reference list
+[Select function - Linux man page](http://linux.die.net/man/2/select)
+[Multiple pipes and forks example](http://www.sfu.ca/~reilande/)
+[C using select() to read from two named pipes (FIFO) - Stackoverflow](http://stackoverflow.com/questions/28519119/c-using-select-to-read-from-two-named-pipes-fifo)
+[Set up arguments each time when using select function - Stackouverflow](http://stackoverflow.com/questions/3324078/why-select-always-return-0-after-the-first-timeout)
