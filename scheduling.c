@@ -6,7 +6,7 @@
  *  that used to assign tasks to child processes in parent process.
  *
  *  Project         : LyreBird
- *  Name            : Guo Chong
+ *  Name            : Chong Guo
  *  Student ID      : 301295753
  *  SFU username    : armourg
  *  Lecture section : D1

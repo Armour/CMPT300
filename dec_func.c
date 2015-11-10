@@ -7,7 +7,7 @@
  *  to integer value and mapping integer to characters, etc.
  *
  *  Project         : LyreBird
- *  Name            : Guo Chong
+ *  Name            : Chong Guo
  *  Student ID      : 301295753
  *  SFU username    : armourg
  *  Lecture section : D1

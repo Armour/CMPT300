@@ -6,7 +6,7 @@
  *  to create child processes to decrypt each tweet file.
  *
  *  Project         : LyreBird
- *  Name            : Guo Chong
+ *  Name            : Chong Guo
  *  Student ID      : 301295753
  *  SFU username    : armourg
  *  Lecture section : D1
