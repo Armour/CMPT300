@@ -17,8 +17,8 @@
 CC = gcc
 CFLAGS  = -DMEMWATCH -DMEMWATCH_STDIO
 LIBS = -lm
-TARGET = lyrebird
-OBJECTS = lyrebird.o memwatch.o line_io.o dec_func.o decrypt.o pipe.o scheduling.o
+TARGET = lyrebird.server
+OBJECTS = lyrebird.server.o memwatch.o line_io.o dec_func.o decrypt.o pipe.o scheduling.o
 
 .PHONY: all prep build clean
 
@@ -35,7 +35,8 @@ prep:
 	@echo "--------------- Compiling source file ---------------------"
 
 clean:
-	-rm -f lyrebird
+	-rm -f lyrebird.server
+	-rm -f lyrebird.client
 	-rm -f *.o
 	-rm -f *.log
 	-rm -f core

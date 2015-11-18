@@ -2,5 +2,6 @@
 decrypted*
 .ycm*
 *.log
+log_file.txt
 data
 report.html

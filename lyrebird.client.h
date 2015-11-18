@@ -1,6 +1,6 @@
 /*------------------------------------------------------
  *
- *  lyrebird.h
+ *  lyrebird.client.h
  *
  *  Project         : LyreBird
  *  Name            : Chong Guo
@@ -26,12 +26,6 @@
 
 /* Used to get current time in specify format */
 void get_time(void);
-
-/* Used to trim leading and trailing spaces in a string  */
-char *trim_space(char *str);
-
-/* Used to get scheduling algorithm name */
-void get_sched_algo(void);
 
 /* Used to free memory and close file pointer before program exit */
 void clean_up(void);
