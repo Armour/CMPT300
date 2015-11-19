@@ -17,22 +17,23 @@
 CC = gcc
 CFLAGS  = -DMEMWATCH -DMEMWATCH_STDIO
 LIBS = -lm
-TARGET = lyrebird.server
-OBJECTS = lyrebird.server.o memwatch.o line_io.o dec_func.o decrypt.o pipe.o scheduling.o
+TARGET_SERVER = lyrebird.server
+TARGET_CLIENT = lyrebird.client
+OBJECTS_SERVER = lyrebird.server.o memwatch.o
+OBJECTS_CLIENT = lyrebird.client.o memwatch.o line_io.o dec_func.o decrypt.o pipe.o scheduling.o
 
-.PHONY: all prep build clean
+.PHONY: all build_server build_client clean
 
-all: prep build
+all: build_server build_client
 	
-build: $(OBJECTS)
-	@echo "--------------- Generating executable file ----------------"
-	$(CC) $(CFLAGS) -o $(TARGET) $^ $(LIBS)
+build_client: $(OBJECTS_CLIENT)
+	$(CC) $(CFLAGS) -o $(TARGET_CLIENT) $^ $(LIBS)
+
+build_server: $(OBJECTS_SERVER)
+	$(CC) $(CFLAGS) -o $(TARGET_SERVER) $^ $(LIBS)
 
 $%.o : $%.c $%.h
 	$(CC) $(CFLAGS) -c $< -o $@
-
-prep:
-	@echo "--------------- Compiling source file ---------------------"
 
 clean:
 	-rm -f lyrebird.server
@@ -40,4 +41,3 @@ clean:
 	-rm -f *.o
 	-rm -f *.log
 	-rm -f core
-

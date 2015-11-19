@@ -24,30 +24,6 @@
 #include "memwatch.h"
 
 /*
- * Function: Round_robin
- * -------------------
- *   This function is "round robin" scheduling algorithm which is
- *   used to assign tasks to child processes in parent process.
- *
- *   Parameters:
- *      no parameters
- *
- *   Returns:
- *      void
- */
-
-void round_robin(void) {
-    get_time();                             /* Let process with number cnt_rr decrypt this tweet */
-    printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + cnt_rr), enc_txt);
-    write(parent_to_child[cnt_rr * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
-    write(parent_to_child[cnt_rr * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
-
-    cnt_rr++;                               /* Update counter of round robin */
-    if (cnt_rr == process_number_limit)
-        cnt_rr = 0;
-}
-
-/*
  * Function: Fcfs
  * -------------------
  *   This function is "first come first serve" scheduling algorithm which is

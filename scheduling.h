@@ -30,7 +30,6 @@ extern char *enc_txt;                   /* Used to store encrypted file name */
 extern char *dec_txt;                   /* Used to store decrypted file name */
 extern char *out_time;                  /* Used to store output time */
 extern int main_flag;                   /* Used to store return value for main function */
-extern int cnt_rr;                      /* Counter for round robin, value means which process is the one that we want to assign task */
 
 extern int *pid_array;                  /* Used to store all the child pid (as int) */
 extern int process_number_limit;        /* The max number of processes that can use now */
@@ -44,9 +43,6 @@ extern int max_descriptor;              /* The max number of file descriptor */
 
 /* Get time format */
 extern void get_time(void);
-
-/* Round robin scheduling algorithm */
-void round_robin(void);
 
 /* First come first serve scheduling algorithm */
 void fcfs(void);

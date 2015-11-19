@@ -23,11 +23,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ifaddrs.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 
 /* Used to get current time in specify format */
 void get_time(void);
 
 /* Used to free memory and close file pointer before program exit */
-void clean_up(void);
+void clean_up(int step);
 
 #endif

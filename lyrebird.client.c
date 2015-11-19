@@ -42,6 +42,16 @@ int *child_to_parent;           /* Pipe that used to transmit message from child
 fd_set rfds;                    /* The set of file descriptor */
 int max_descriptor;             /* The max number of file descriptor */
 
+int port_number;
+struct hostent *server;
+
+int sockfd;
+socklen_t addr_len;
+struct sockaddr_in serv_addr;
+
+struct ifaddrs *ifaddr, *ifa;   /* Used to store the return value of getifaddrs function */
+char host[NI_MAXHOST];          /* Used to store the return value of getnameinfo function */
+
 /*
  * Function: Get_time
  * -------------------
@@ -74,13 +84,17 @@ void get_time(void) {
  *      void
  */
 
-void clean_up(void) {               /* Always remember to free all and close file pointer! */
-    free(enc_txt);
-    free(dec_txt);
-    free(out_time);
-    free(parent_to_child);
-    free(child_to_parent);
-    free(pid_array);
+void clean_up(int step) {               /* Always remember to free all and close file pointer! */
+    if (step >= 1) free(out_time);
+    if (step >= 2) freeifaddrs(ifaddr);
+    if (step >= 3) {
+        close(sockfd);
+        free(enc_txt);
+        free(dec_txt);
+        free(parent_to_child);
+        free(child_to_parent);
+        free(pid_array);
+    }
 }
 
 /*
@@ -98,23 +112,95 @@ void clean_up(void) {               /* Always remember to free all and close fil
 
 int main(int argc, char *argv[]) {
     int i;
+    int mark;
 
     out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
 
-    if (argc != 2) {                    /* Check if the arguments number is right or not */
+    if (argc != 3) {                    /* Check if the arguments number is right or not */
         get_time();
-        printf("[%s] (Process ID #%d) Arguments number is not right! Usage: ./lyrebird config_file_name_here.txt\n", out_time, getpid());
-        free(out_time);
-        return 1;
+        printf("[%s] (Process ID #%d) Arguments number is not right! Usage: ./lyrebird hostname port\n", out_time, getpid());
+        clean_up(1);
+        exit(EXIT_FAILURE);
     }
 
-    init_pipe();                        /* Initialize pipe */
+    if ((server = gethostbyname(argv[1])) == NULL) {        /* Get the server IP address */
+        get_time();
+        printf("[%s] (Process ID #%d) Hostname (IP) is not in the right format!\n", out_time, getpid());
+        clean_up(1);
+        exit(EXIT_FAILURE);
+    }
+
+    if ((port_number = atoi(argv[2])) == 0) {               /* Get the server port number */
+        get_time();
+        printf("[%s] (Process ID #%d) Can not use this port number for TCP connection!\n", out_time, getpid());
+        clean_up(1);
+        exit(EXIT_FAILURE);
+    }
+
+    if (getifaddrs(&ifaddr) == -1) {        /* Get the ip address of this machine and check if it failed */
+        get_time();
+        printf("[%s] (Process ID #%d) ERROR: Can not get the interface address of this machine!\n", out_time, getpid());
+        clean_up(1);
+        exit(EXIT_FAILURE);
+    }
+
+    addr_len = sizeof(struct sockaddr_in);
+
+    for (ifa = ifaddr, i = 0; ifa != NULL; ifa = ifa->ifa_next, i++) {          /* Iterate each interface addresses and get the IP address */
+        if (ifa->ifa_addr == NULL)
+            continue;
+
+        int family = ifa->ifa_addr->sa_family;
+
+        if (family != AF_INET)                                                  /* If it is not the IPv4 interface */
+            continue;
+
+        if (getnameinfo(ifa->ifa_addr, addr_len, host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) != 0) {         /* If can not get the address information of interface address */
+            get_time();
+            printf("[%s] (Process ID #%d) ERROR: Can not get the address information of interface address!\n", out_time, getpid());
+            clean_up(2);
+            exit(EXIT_FAILURE);
+        }
+
+        if (strcmp(host, "0.0.0.0") == 0 || strcmp(host, "127.0.0.1") == 0)     /* Filter the special IP address "0.0.0.0" and "127.0.0.1" */
+            continue;
+
+        break;                                                                  /* If found a avaliable Ip address, then we break */
+    }
+
+    memset(&serv_addr, 0, addr_len);                                            /* Initialize server address config */
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port_number);
+    memcpy((char *)&serv_addr.sin_addr.s_addr, (char *)server->h_addr, server->h_length);
+
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {                       /* Create socket in server */
+        get_time();
+        printf("[%s] (Process ID #%d) ERROR: Create socket failed!\n", out_time, getpid());
+        clean_up(2);
+        exit(EXIT_FAILURE);
+    }
+
+    init_pipe();                                            /* Initialize pipe */
 
     enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
     dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
 
-    while (scanf("%s", enc_txt) != EOF) {              /* Read until end of file */
-        scanf("%s", dec_txt);
+    if (connect(sockfd, (struct sockaddr *)&serv_addr, addr_len) < 0) {
+        get_time();
+        printf("[%s] (Process ID #%d) ERROR: Connect to server %s:%d failed!\n", out_time, getpid(), argv[1], port_number);
+        clean_up(3);
+        exit(EXIT_FAILURE);
+    }
+
+    get_time();
+    printf("[%s] lyrebird client: PID %d connected to server %s on port %d.\n", out_time, getpid(), argv[1], port_number);
+    write(sockfd, host, sizeof(host));
+
+    while (read(sockfd, &mark, sizeof(mark))) {                  /* Always waiting for message from server side */
+
+        if (ntohl(mark) == 0) break;
+        read(sockfd, enc_txt, sizeof(char) * FILE_MAXLENGTH);
+        read(sockfd, dec_txt, sizeof(char) * FILE_MAXLENGTH);
 
         if (process_number_now + 1 < process_number_limit) {            /* If not exceed the max number of process */
             process_number_now++;
@@ -160,10 +246,16 @@ int main(int argc, char *argv[]) {
                 if (state == 1) break;                              /* If child decryption meet an fatal error */
                 if (state == 0) {                                   /* If child process is ready to decrypt another file */
                     write(child_to_parent[process_number_now * 2 + 1], &process_number_now, sizeof(int));
+                    mark = htonl(1);
+                    write(sockfd, &mark, sizeof(int));
+                    write(sockfd, host, sizeof(host));
+                    write(sockfd, enc_txt, sizeof(char) * FILE_MAXLENGTH);
+                    mark = htonl(getpid());
+                    write(sockfd, &mark, sizeof(int));
                 }
             }
 
-            clean_up();                                             /* Always remember to free all and close file pointer! */
+            clean_up(3);                                             /* Always remember to free all and close file pointer! */
             close(parent_to_child[process_number_now * 2]);         /* Close used pipes */
             close(child_to_parent[process_number_now * 2 + 1]);
             exit(state);
@@ -183,6 +275,15 @@ int main(int argc, char *argv[]) {
         close_ctp_pipe_with_pid(pid);                       /* Close the pipe that uses to read messages from exited child process */
     }
 
-    clean_up();                                             /* Always remember to free all and close file pointer! */
+    mark = htonl(0);
+    write(sockfd, &mark, sizeof(int));
+    write(sockfd, host, sizeof(host));
+
+    if (main_flag == 0) {
+        get_time();
+        printf("[%s] lyrebird client: PID %d completed its tasks and is exiting successfully.\n", out_time, getpid());
+    }
+
+    clean_up(3);                                             /* Always remember to free all and close file pointer! */
     return main_flag;
 }
