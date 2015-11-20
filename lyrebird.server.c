@@ -32,18 +32,17 @@ char *dec_txt;                  /* Used to store decrypted file name */
 char *out_time;                 /* Used to store output time */
 FILE *fcfg, *flog;              /* The file pointer that used to open config file and log file */
 
-int max_descriptor;             /* The max number of file descriptor */
+int max_fds;                    /* The max number of file descriptor */
 fd_set rfds;                    /* The set of file descriptor */
 
-struct ifaddrs *ifaddr, *ifa;   /* Used to store the return value of getifaddrs function */
-char host[NI_MAXHOST];          /* Used to store the return value of getnameinfo function */
+struct ifaddrs *ifaddr, *ifa;               /* Used to store the return value of getifaddrs function */
+char host[NI_MAXHOST];                      /* Used to store the return value of getnameinfo function */
 
-int sockfd;
-int sockfd_cli[32];             /* The array of client socket */
-int sockfd_cnt = 0;
-int sockfd_max = 32;
-socklen_t addr_len;
-struct sockaddr_in serv_addr, cli_addr;
+int sockfd;                                 /* Socket file descriptor */
+int sockfd_cli[CLIENT_MAXNUM];              /* The array of client socket file descriptor */
+char ipaddr_cli[CLIENT_MAXNUM][NI_MAXHOST]; /* The array of client IP address */
+socklen_t addr_len;                         /* The size of sockaddr_in */
+struct sockaddr_in serv_addr, cli_addr;     /* Used to store the server and client address information */
 
 /*
  * Function: Get_time
@@ -63,6 +62,27 @@ void get_time(void) {
     time(&raw_time);
     tmp_time = localtime(&raw_time);
     strftime(out_time, TIME_MAXLENGTH, "%a %b %d %H:%M:%S %Y", tmp_time);       /* Format time */
+}
+
+/*
+ * Function: Get_host_by_sockfd
+ * -------------------
+ *   This function is used to get host ip address through socket file descriptor
+ *
+ *   Parameters:
+ *      sockfd: a file descriptor
+ *
+ *   Returns:
+ *      a pointer to a host ip address
+ */
+
+char *get_host_by_sockfd(int sockfd) {
+    int i;
+    for (i = 0; i < CLIENT_MAXNUM; ++i) {
+        if (sockfd_cli[i] == sockfd)
+            return ipaddr_cli[i];
+    }
+    return NULL;
 }
 
 /*
@@ -101,19 +121,23 @@ void clean_up(int step) {               /* Always remember to free all and close
  */
 
 int main(int argc, char *argv[]) {
-    int i;
-    int mark;
-    int read_flag = 1;
+    int i, j;
+    int mark;                       /* Used to write int to client socket */
+    int opt = TRUE;                 /* Used when set socket options */
+    int cnt_task = 0;               /*  */
+    int max_task = 0;               /*  */
+    int finish_flag = 0;            /*  */
+    int read_flag = 1;              /*  */
     int read_type;
     int read_pid;
-    char read_ip[NI_MAXHOST];
-    char read_buffer[FILE_MAXLENGTH];
+    char *read_ip;
+    char read_buffer[ERROR_MAXLENGTH];
 
     out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
 
     if (argc != 3) {                        /* Check if the arguments number is right or not */
         get_time();
-        printf("[%s] (Process ID #%d) Arguments number is not right! Usage: ./lyrebird.server config_file.txt log_file.txt\n", out_time, getpid());
+        printf("[%s] (Process ID #%d) Arguments number is not right! Usage: ./lyrebird.server <config_file> <log_file>\n", out_time, getpid());
         clean_up(1);
         exit(EXIT_FAILURE);
     }
@@ -174,6 +198,13 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0) {      /* Set socket option to reuseable address (not necessary but good) */
+        get_time();
+        printf("[%s] (Process ID #%d) ERROR: Server can not set socket option!\n", out_time, getpid());
+        clean_up(4);
+        exit(EXIT_FAILURE);
+    }
+
     memset(&serv_addr, 0, addr_len);                                            /* Initialize server address config */
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = inet_addr(host);
@@ -186,7 +217,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    if (listen(sockfd, 8) < 0) {                                                /* Listen at the server socket */
+    if (listen(sockfd, CLIENT_MAXNUM) < 0) {                                       /* Listen at the server socket */
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Server listen at socket failed!\n", out_time, getpid());
         clean_up(5);
@@ -203,86 +234,126 @@ int main(int argc, char *argv[]) {
     get_time();                                                                         /* Print out the server information */
     printf("[%s] lyrebird.server: PID %d on host %s, port %d\n", out_time, getpid(), inet_ntoa(serv_addr.sin_addr), ntohs(serv_addr.sin_port));
 
+    for (i = 0; i < CLIENT_MAXNUM; ++i) {
+        sockfd_cli[i] = 0;
+    }
+
     enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
     dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
 
-    FD_ZERO(&rfds);
-    FD_SET(sockfd, &rfds);
-    for (i = 0; i < 32; ++i) {
-        sockfd_cli[i] = -1;
-    }
-
-    while (1) {                /* Read until end of file */
+    while (TRUE) {                /* Read until end of file */
         if (read_flag) {
-            if (fscanf(fcfg, "%s", enc_txt) == EOF) break;
-            fscanf(fcfg, "%s", dec_txt);
+            if (fscanf(fcfg, "%s", enc_txt) == EOF) {
+                finish_flag = 1;
+            } else {
+                fscanf(fcfg, "%s", dec_txt);
+            }
         }
         read_flag = 0;
 
-        if (select(FD_SETSIZE, &rfds, NULL, NULL, NULL) == -1) {
+        if (finish_flag && cnt_task == max_task) break;
+
+        FD_ZERO(&rfds);
+        FD_SET(sockfd, &rfds);
+        max_fds = sockfd;
+        for (i = 0; i < CLIENT_MAXNUM; i++) {
+            if (sockfd_cli[i] > 0)
+                FD_SET(sockfd_cli[i], &rfds);
+            if (sockfd_cli[i] > max_fds)
+                max_fds = sockfd_cli[i];
+        }
+
+        if (select(max_fds + 1, &rfds, NULL, NULL, NULL) == -1) {
             get_time();
             fprintf(flog, "[%s] (Process ID #%d) ERROR: Server failed when run select function!\n", out_time, getpid());
             main_flag = 1;
             break;
         }
 
-        for (i = 0; i < FD_SETSIZE; i++) {
+        for (i = 0; i < max_fds + 1; i++) {
             if (FD_ISSET(i, &rfds)) {
-                if (i == sockfd) {
-                    if (sockfd_cnt < sockfd_max) {
-                        if ((sockfd_cli[sockfd_cnt] = accept(sockfd, (struct sockaddr *)&cli_addr, &addr_len)) < 0) {   /* Accept new connections from client machine */
-                            get_time();
-                            fprintf(flog, "[%s] (Process ID #%d) ERROR: Server accept client socket failed!\n", out_time, getpid());
-                            main_flag = 1;
-                            break;
-                        }
-                        FD_SET(sockfd_cli[sockfd_cnt], &rfds);
-                        mark = htonl(1);
-                        write(sockfd_cli[sockfd_cnt], &mark, sizeof(mark));
-                        write(sockfd_cli[sockfd_cnt], enc_txt, sizeof(char) * FILE_MAXLENGTH);
-                        write(sockfd_cli[sockfd_cnt], dec_txt, sizeof(char) * FILE_MAXLENGTH);
-                        if (read(sockfd_cli[sockfd_cnt], read_ip, sizeof(read_ip)) != -1) {
-                            get_time();
-                            fprintf(flog, "[%s] Successfully connected to lyrebird client %s.\n", out_time, read_ip);
-                            fprintf(flog, "[%s] The lyrebird client %s has been given the task of decrypting %s.\n", out_time, read_ip, enc_txt);
-                            read_flag = 1;
-                        } else {
-                            get_time();
-                            fprintf(flog, "[%s] (Process ID #%d) ERROR: Server failed when read message from client machine!\n", out_time, getpid());
-                            main_flag = 1;
-                            break;
-                        }
-                        sockfd_cnt++;
+                if (i == sockfd) {                              /* If have a new client connect */
+                    int sockfd_new;
+                    if ((sockfd_new = accept(sockfd, (struct sockaddr *)&cli_addr, &addr_len)) < 0) {   /* Accept new connections from client machine */
+                        get_time();
+                        fprintf(flog, "[%s] (Process ID #%d) ERROR: Server accept client socket failed!\n", out_time, getpid());
+                        main_flag = 1;
+                        break;
                     }
+                    read(sockfd_new, &read_type, sizeof(read_type));
+                    read_type = ntohl(read_type);
+                    if (read_type != CONNECT_MSG) {
+                        get_time();
+                        fprintf(flog, "[%s] (Process ID #%d) ERROR: Server accept client socket failed!\n", out_time, getpid());
+                        main_flag = 1;
+                        break;
+                    }
+                    get_time();
+                    fprintf(flog, "[%s] Successfully connected to lyrebird client %s.\n", out_time, inet_ntoa(cli_addr.sin_addr));
+                    for (i = 0; i < CLIENT_MAXNUM; ++i) {
+                        if (sockfd_cli[i] == 0) {
+                            printf("State: %d\n", i);
+                            sockfd_cli[i] = sockfd_new;
+                            memset(ipaddr_cli[i], 0, sizeof(ipaddr_cli[i]));
+                            strcpy(ipaddr_cli[i], (char *)inet_ntoa(cli_addr.sin_addr));
+                            break;
+                        }
+                    }
+                    break;
                 } else {
                     read(i, &read_type, sizeof(read_type));
                     read_type = ntohl(read_type);
+                    read_ip = get_host_by_sockfd(i);
+                    printf("MSG: %d\n", read_type);
                     switch (read_type) {
-                        case 1:
-                            read(i, read_ip, sizeof(read_ip));
+                        case SUCCESS_MSG:
                             read(i, read_buffer, sizeof(char) * FILE_MAXLENGTH);
                             read(i, &read_pid, sizeof(read_pid));
                             read_pid = ntohl(read_pid);
                             get_time();
-                            fprintf(flog, "[%s] The lyrebird client %s successfully decrypted %s in process %d.\n", out_time, read_ip, read_buffer, read_pid);
+                            fprintf(flog, "[%s] The lyrebird client %s has successfully decrypted %s in process %d.\n", out_time, read_ip, read_buffer, read_pid);
+                            cnt_task++;
+                            printf("%d cnt: %d max: %d\n", read_type, cnt_task, max_task);
+                        case DISPATCH_MSG:
+                            if (finish_flag) break;
                             mark = htonl(1);
                             write(i, &mark, sizeof(mark));
                             write(i, enc_txt, sizeof(char) * FILE_MAXLENGTH);
                             write(i, dec_txt, sizeof(char) * FILE_MAXLENGTH);
                             get_time();
                             fprintf(flog, "[%s] The lyrebird client %s has been given the task of decrypting %s.\n", out_time, read_ip, enc_txt);
+                            max_task++;
+                            printf("%d cnt: %d max: %d\n", read_type, cnt_task, max_task);
                             read_flag = 1;
                             break;
-                        case 2:
-                            read(i, read_ip, sizeof(read_ip));
-                            read(i, read_buffer, sizeof(char) * FILE_MAXLENGTH);
+                        case FAILURE_MSG:
+                            read(i, read_buffer, sizeof(char) * ERROR_MAXLENGTH);
                             get_time();
-                            fprintf(flog, "[%s] The lyrebird client %s has encountered an error: %s.\n", out_time, read_ip, read_buffer);
+                            fprintf(flog, "[%s] The lyrebird client %s has encountered an error: %s", out_time, read_ip, read_buffer);
+                            cnt_task++;
+                            printf("%d cnt: %d max: %d\n", read_type, cnt_task, max_task);
+                            if (finish_flag) break;
+                            mark = htonl(1);
+                            write(i, &mark, sizeof(mark));
+                            write(i, enc_txt, sizeof(char) * FILE_MAXLENGTH);
+                            write(i, dec_txt, sizeof(char) * FILE_MAXLENGTH);
+                            get_time();
+                            fprintf(flog, "[%s] The lyrebird client %s has been given the task of decrypting %s.\n", out_time, read_ip, enc_txt);
+                            max_task++;
+                            printf("%d cnt: %d max: %d\n", read_type, cnt_task, max_task);
+                            read_flag = 1;
                             break;
-                        case 0:
-                            read(i, read_ip, sizeof(read_ip));
+                        case DISCONNECT_MSG:
                             get_time();
                             fprintf(flog, "[%s] lyrebird client %s has disconnected expectedly.\n", out_time, read_ip);
+                            for (j = 0; j < CLIENT_MAXNUM; ++j) {
+                                if (sockfd_cli[j] == i) {
+                                    close(i);
+                                    sockfd_cli[j] = 0;
+                                    memset(ipaddr_cli[j], 0, sizeof(ipaddr_cli[j]));
+                                    break;
+                                }
+                            }
                             break;
                         default:
                             get_time();
@@ -290,6 +361,7 @@ int main(int argc, char *argv[]) {
                             main_flag = 1;
                             break;
                     }
+                    break;
                 }
             }
             if (main_flag) break;
@@ -298,11 +370,9 @@ int main(int argc, char *argv[]) {
     }
 
     mark = htonl(0);
-    for (i = 0; i < 32; ++i) {
-        if (sockfd_cli[i] != -1) {
+    for (i = 0; i < CLIENT_MAXNUM; ++i) {
+        if (sockfd_cli[i])
             write(sockfd_cli[i], &mark, sizeof(mark));
-            //close(sockfd_cli[i]);
-        }
     }
 
     get_time();                                                 /* Print out the server information */

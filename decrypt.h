@@ -21,11 +21,15 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <netdb.h>
 
 #define TIME_MAXLENGTH 50
+#define FATAL_ERROR 1
+#define OPEN_FILE_ERROR 2
+#define MALLOC_FAIL_ERROR 3
 
-/* Get current time in specify format */
-void get_tweets_time(void);
+extern int sockfd;
+extern char host[NI_MAXHOST];          /* Used to store the return value of getnameinfo function */
 
 /* Decrypt each tweet through 4 steps */
 char *decrypt_each(char *tweet);

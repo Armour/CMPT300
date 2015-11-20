@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 
     if (argc != 3) {                    /* Check if the arguments number is right or not */
         get_time();
-        printf("[%s] (Process ID #%d) Arguments number is not right! Usage: ./lyrebird hostname port\n", out_time, getpid());
+        printf("[%s] (Process ID #%d) Arguments number is not right! Usage: ./lyrebird <hostname/IP> <port number>\n", out_time, getpid());
         clean_up(1);
         exit(EXIT_FAILURE);
     }
@@ -194,7 +194,12 @@ int main(int argc, char *argv[]) {
 
     get_time();
     printf("[%s] lyrebird client: PID %d connected to server %s on port %d.\n", out_time, getpid(), argv[1], port_number);
-    write(sockfd, host, sizeof(host));
+    mark = htonl(CONNECT_MSG);
+    write(sockfd, &mark, sizeof(int));
+    for (i = 0; i < process_number_limit; ++i) {
+        mark = htonl(DISPATCH_MSG);
+        write(sockfd, &mark, sizeof(int));
+    }
 
     while (read(sockfd, &mark, sizeof(mark))) {                  /* Always waiting for message from server side */
 
@@ -245,18 +250,17 @@ int main(int argc, char *argv[]) {
                 state = decrypt(enc_txt, dec_txt);
                 if (state == 1) break;                              /* If child decryption meet an fatal error */
                 if (state == 0) {                                   /* If child process is ready to decrypt another file */
-                    write(child_to_parent[process_number_now * 2 + 1], &process_number_now, sizeof(int));
-                    mark = htonl(1);
+                    mark = htonl(SUCCESS_MSG);
                     write(sockfd, &mark, sizeof(int));
-                    write(sockfd, host, sizeof(host));
                     write(sockfd, enc_txt, sizeof(char) * FILE_MAXLENGTH);
                     mark = htonl(getpid());
                     write(sockfd, &mark, sizeof(int));
                 }
+                write(child_to_parent[process_number_now * 2 + 1], &process_number_now, sizeof(int));
             }
 
-            clean_up(3);                                             /* Always remember to free all and close file pointer! */
-            close(parent_to_child[process_number_now * 2]);         /* Close used pipes */
+            clean_up(3);                                                /* Always remember to free all and close file pointer! */
+            close(parent_to_child[process_number_now * 2]);             /* Close used pipes */
             close(child_to_parent[process_number_now * 2 + 1]);
             exit(state);
         }
@@ -275,9 +279,8 @@ int main(int argc, char *argv[]) {
         close_ctp_pipe_with_pid(pid);                       /* Close the pipe that uses to read messages from exited child process */
     }
 
-    mark = htonl(0);
+    mark = htonl(DISCONNECT_MSG);
     write(sockfd, &mark, sizeof(int));
-    write(sockfd, host, sizeof(host));
 
     if (main_flag == 0) {
         get_time();

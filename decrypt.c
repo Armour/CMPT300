@@ -24,36 +24,18 @@
 #include "dec_func.h"
 #include "line_io.h"
 #include "time.h"
+#include "scheduling.h"
 #include "memwatch.h"
 
 int len = 0;                                /* Length of tweet */
-int flag = 0;                               /* Used to show program running status, if equal to 1, means there is some problems */
+int flag = 0;                               /* Used to show program running status, if not equals to 0, means there is some problems */
 char *tweets_enc;                           /* Used to store the encrypted tweet */
 char *tweets_dec;                           /* Used to store the decrypted tweet */
 char *group_char;                           /* Used to store each group of characters */
 char *tweets_time;                          /* Used to store output time */
 unsigned long long *cipher_number;          /* Used to store cipher number */
 unsigned long long *ptext_number;           /* Used to store plain-text number */
-
-/*
- * Function: Get_tweets_time
- * -------------------
- *   This function is used to get current time in specify format
- *
- *   Parameters:
- *      no parameters
- *
- *   Returns:
- *      void
- */
-
-void get_tweets_time(void) {
-    time_t raw_time;                /* Used to generate output time */
-    struct tm *tmp_time;            /* Used to generate output time */
-    time(&raw_time);
-    tmp_time = localtime(&raw_time);
-    strftime(tweets_time, TIME_MAXLENGTH, "%a %b %d %H:%M:%S %Y", tmp_time);       /* Format time */
-}
+char buffer[ERROR_MAXLENGTH];
 
 /*
  * Function: decrypt_each
@@ -73,29 +55,18 @@ char *decrypt_each(char *tweets_enc) {
 
     tweets_dec = (char *)malloc(sizeof(char) * TWEETS_MAX_LENGTH);
     if (tweets_dec == NULL) {                   /* Failed on malloc */
-        get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] (Process ID #%d) ERROR: Malloc tweets_dec failed!\n", tweets_time, getpid());
-        flag = 1;
+        flag = MALLOC_FAIL_ERROR;
         return tweets_dec;
     }
 
     /* Step 1: Remove unnecessary characters in regular interval */
     rm_extra_char(tweets_enc, tweets_dec, &len);
 
-    if (len % CONSTANT_MULTIPLE != 0) {         /* Check if len is multiple of 6 */
-        get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] (Process ID #%d) ERROR: There is a tweet that is not multiple of 6!\n", tweets_time, getpid());
-        flag = 0;
-        return tweets_dec;
-    }
-
     /* Step 2: Transform each group of 6 characters into an integer using base 41 */
     num_len = len / CONSTANT_MULTIPLE;
     cipher_number = (unsigned long long *)malloc(sizeof(unsigned long long) * num_len);
     if (cipher_number == NULL) {                /* Failed on malloc */
-        get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] (Process ID #%d) ERROR: Malloc cipher_number failed!\n", tweets_time, getpid());
-        flag = 1;
+        flag = MALLOC_FAIL_ERROR;
         return tweets_dec;
     }
 
@@ -106,9 +77,7 @@ char *decrypt_each(char *tweets_enc) {
     /* Step 3: Map each cipher number onto a similar plain-text number */
     ptext_number = (unsigned long long *)malloc(sizeof(unsigned long long) * num_len);
     if (ptext_number == NULL) {                 /* Failed on malloc */
-        get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] (Process ID #%d) ERROR: Malloc ptext_number failed!\n", tweets_time, getpid());
-        flag = 1;
+        flag = MALLOC_FAIL_ERROR;
         return tweets_dec;
     }
 
@@ -119,9 +88,7 @@ char *decrypt_each(char *tweets_enc) {
     /* Step 4: Get the final decrypted text by use the inverse function of Step 2 */
     group_char = (char *)malloc(sizeof(char) * CONSTANT_MULTIPLE);
     if (group_char == NULL) {                   /* Failed on malloc */
-        get_tweets_time();                      /* Print error message in child process */
-        printf("[%s] (Process ID #%d) ERROR: Malloc group_char failed!\n", tweets_time, getpid());
-        flag = 1;
+        flag = MALLOC_FAIL_ERROR;
         return tweets_dec;
     }
 
@@ -147,6 +114,8 @@ char *decrypt_each(char *tweets_enc) {
  *   Parameters:
  *      input: the file name of encrypted file
  *      output: the file name of decrypted file
+ *      sockfd: the socket file descriptor to the server
+ *      host: the IP address of this client machine
  *
  *   Returns:
  *      return 0 for normal exit
@@ -154,44 +123,56 @@ char *decrypt_each(char *tweets_enc) {
 
 int decrypt(char *input, char *output) {
     FILE *fin, *fout;
+    int mark;
 
-    tweets_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
-    if (tweets_time == NULL) {                          /* If malloc time string failed, can't output time anymore... */
-        printf("[XXX XXX 00 00:00:00 2015] (Process ID #%d) ERROR: Malloc tweets_time failed!!!(Can't output time)\n", getpid());
-        return 0;
-    }
+    //tweets_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
+    //if (tweets_time == NULL) {                          /* If malloc time string failed, can't output time anymore... */
+    //    snprintf(buffer, ERROR_MAXLENGTH, "Malloc tweets_time failed when decrypt file %s in process %d!\n", input, getpid());
+    //    mark = htonl(2);
+    //    write(sockfd, &mark, sizeof(int));
+    //    write(sockfd, host, sizeof(host));
+    //    write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
+    //    return 0;
+    //}
 
     fin = fopen(input, "r");
 
     if (fin == NULL) {                                  /* Check input file is exist or not */
-        get_tweets_time();                              /* Print error message in child process */
-        printf("[%s] (Process ID #%d) ERROR: Input file %s not exist!\n", tweets_time, getpid(), input);
-        free(tweets_time);
-        return 0;
+        snprintf(buffer, ERROR_MAXLENGTH, "Unable to open input file %s in process %d!\n", input, getpid());
+        mark = htonl(FAILURE_MSG);
+        write(sockfd, &mark, sizeof(int));
+        write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
+        return OPEN_FILE_ERROR;
     }
 
     fout = fopen(output, "w+");
 
     if (fout == NULL) {                                 /* Check if output file opened successfully */
-        get_tweets_time();                              /* Print error message in child process */
-        printf("[%s] (Process ID #%d) ERROR: Create output file %s failed!\n", tweets_time, getpid(), input);
-        free(tweets_time);
+        snprintf(buffer, ERROR_MAXLENGTH, "Create output file failed when decrypt file %s in process %d!\n", input, getpid());
+        mark = htonl(FAILURE_MSG);
+        write(sockfd, &mark, sizeof(int));
+        write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
         fclose(fin);
-        return 0;
+        return OPEN_FILE_ERROR;
     }
 
     while (!feof(fin)) {
         tweets_enc = input_line(fin, &len);             /* Get each line's tweet from input file */
         if (tweets_enc == NULL) {
-            get_tweets_time();                          /* Print error message in child process */
-            printf("[%s] (Process ID #%d) ERROR: Malloc tweets_enc string failed!\n", tweets_time, getpid());
-            free(tweets_time);
+            snprintf(buffer, ERROR_MAXLENGTH, "Malloc tweets_enc string failed when decrypt file %s in process %d!\n", input, getpid());
+            mark = htonl(FAILURE_MSG);
+            write(sockfd, &mark, sizeof(int));
+            write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
             fclose(fin);
-            return 0;
+            return EXIT_FAILURE;
         }
         if (len != -1) {
             tweets_dec = decrypt_each(tweets_enc);      /* Decrypt each line's tweet */
-            if (flag) {                                 /* If there is some unexpected problems, exit */
+            if (flag == MALLOC_FAIL_ERROR) {            /* If there is some unexpected problems, exit */
+                snprintf(buffer, ERROR_MAXLENGTH, "Malloc failed in decrypt_each function when decrypt file %s in process %d!\n", input, getpid());
+                mark = htonl(FAILURE_MSG);
+                write(sockfd, &mark, sizeof(int));
+                write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
                 free(tweets_dec);
                 free(tweets_enc);
                 break;
@@ -204,12 +185,6 @@ int decrypt(char *input, char *output) {
 
     fclose(fin);
     fclose(fout);
-
-    if (flag == 0) {                                    /* If decrypt tweets without error */
-        get_tweets_time();                              /* Print error message in child process */
-        printf("[%s] Process ID #%d decrypted %s successfully.\n", tweets_time, getpid(), input);
-        free(tweets_time);
-    }
 
     return flag;
 }

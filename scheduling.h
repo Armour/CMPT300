@@ -25,6 +25,12 @@
 #include <unistd.h>
 
 #define FILE_MAXLENGTH 1030
+#define ERROR_MAXLENGTH (FILE_MAXLENGTH + 100)
+#define CONNECT_MSG 1
+#define DISPATCH_MSG 2
+#define SUCCESS_MSG 3
+#define FAILURE_MSG 4
+#define DISCONNECT_MSG 5
 
 extern char *enc_txt;                   /* Used to store encrypted file name */
 extern char *dec_txt;                   /* Used to store decrypted file name */
