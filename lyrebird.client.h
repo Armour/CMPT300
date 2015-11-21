@@ -27,6 +27,10 @@
 #include <ifaddrs.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+
+#define TRUE 1
+#define FALSE 0
 
 /* Used to get current time in specify format */
 void get_time(void);

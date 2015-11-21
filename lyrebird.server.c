@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
 
     if (argc != 3) {                        /* Check if the arguments number is right or not */
         get_time();
-        printf("[%s] (Process ID #%d) Arguments number is not right! Usage: ./lyrebird.server <config_file> <log_file>\n", out_time, getpid());
+        printf("[%s] (Process ID #%d) Arguments number is not right! Usage: %s <config_file> <log_file>\n", out_time, getpid(), argv[0]);
         clean_up(1);
         exit(EXIT_FAILURE);
     }
@@ -173,9 +173,7 @@ int main(int argc, char *argv[]) {
         if (ifa->ifa_addr == NULL)
             continue;
 
-        int family = ifa->ifa_addr->sa_family;
-
-        if (family != AF_INET)                                                  /* If it is not the IPv4 interface */
+        if (ifa->ifa_addr->sa_family != AF_INET)                                                  /* If it is not the IPv4 interface */
             continue;
 
         if (getnameinfo(ifa->ifa_addr, addr_len, host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) != 0) {         /* If can not get the address information of interface address */
@@ -201,14 +199,19 @@ int main(int argc, char *argv[]) {
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0) {      /* Set socket option to reuseable address (not necessary but good) */
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Server can not set socket option!\n", out_time, getpid());
-        clean_up(4);
+        clean_up(5);
         exit(EXIT_FAILURE);
     }
 
     memset(&serv_addr, 0, addr_len);                                            /* Initialize server address config */
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = inet_addr(host);
     serv_addr.sin_port = htons(0);
+    if (inet_pton(AF_INET, host, &(serv_addr.sin_addr)) <= 0) {
+        get_time();
+        printf("[%s] (Process ID #%d) ERROR: Host in inet_pton function is not a valid IP address!\n", out_time, getpid());
+        clean_up(5);
+        exit(EXIT_FAILURE);
+    }
 
     if (bind(sockfd, (struct sockaddr *)&serv_addr, addr_len) < 0) {            /* Bind the server socket */
         get_time();
@@ -232,7 +235,7 @@ int main(int argc, char *argv[]) {
     }
 
     get_time();                                                                         /* Print out the server information */
-    printf("[%s] lyrebird.server: PID %d on host %s, port %d\n", out_time, getpid(), inet_ntoa(serv_addr.sin_addr), ntohs(serv_addr.sin_port));
+    printf("[%s] lyrebird.server: PID %d on host %s, port %d\n", out_time, getpid(), host, ntohs(serv_addr.sin_port));
 
     for (i = 0; i < CLIENT_MAXNUM; ++i) {
         sockfd_cli[i] = 0;
@@ -274,6 +277,7 @@ int main(int argc, char *argv[]) {
             if (FD_ISSET(i, &rfds)) {
                 if (i == sockfd) {                              /* If have a new client connect */
                     int sockfd_new;
+                    char buf[INET_ADDRSTRLEN];
                     if ((sockfd_new = accept(sockfd, (struct sockaddr *)&cli_addr, &addr_len)) < 0) {   /* Accept new connections from client machine */
                         get_time();
                         fprintf(flog, "[%s] (Process ID #%d) ERROR: Server accept client socket failed!\n", out_time, getpid());
@@ -288,14 +292,20 @@ int main(int argc, char *argv[]) {
                         main_flag = EXIT_FAILURE;
                         break;
                     }
+                    if (inet_ntop(AF_INET, &cli_addr.sin_addr, buf, sizeof(buf)) == NULL) {
+                        get_time();
+                        fprintf(flog, "[%s] (Process ID #%d) ERROR: Server get client ip address by inet_ntop failed!\n", out_time, getpid());
+                        main_flag = EXIT_FAILURE;
+                        break;
+                    }
                     get_time();
-                    fprintf(flog, "[%s] Successfully connected to lyrebird client %s.\n", out_time, inet_ntoa(cli_addr.sin_addr));
+                    fprintf(flog, "[%s] Successfully connected to lyrebird client %s.\n", out_time, buf);
                     for (i = 0; i < CLIENT_MAXNUM; ++i) {
                         if (sockfd_cli[i] == 0) {
                             printf("State: %d\n", i);
                             sockfd_cli[i] = sockfd_new;
                             memset(ipaddr_cli[i], 0, sizeof(ipaddr_cli[i]));
-                            strcpy(ipaddr_cli[i], (char *)inet_ntoa(cli_addr.sin_addr));
+                            strcpy(ipaddr_cli[i], buf);
                             break;
                         }
                     }
@@ -358,9 +368,9 @@ int main(int argc, char *argv[]) {
     }
 
     int remained_cli = 0;
-    mark = htonl(0);
     for (i = 0; i < CLIENT_MAXNUM; ++i) {
         if (sockfd_cli[i]) {
+            mark = htonl(0);
             write(sockfd_cli[i], &mark, sizeof(mark));
             remained_cli++;
         }

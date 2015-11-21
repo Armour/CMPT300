@@ -47,7 +47,7 @@ struct hostent *server;
 
 int sockfd;
 socklen_t addr_len;
-struct sockaddr_in serv_addr;
+struct sockaddr_in serv_addr, cli_addr;
 
 struct ifaddrs *ifaddr, *ifa;   /* Used to store the return value of getifaddrs function */
 char host[NI_MAXHOST];          /* Used to store the return value of getnameinfo function */
@@ -87,8 +87,8 @@ void get_time(void) {
 void clean_up(int step) {               /* Always remember to free all and close file pointer! */
     if (step >= 1) free(out_time);
     if (step >= 2) freeifaddrs(ifaddr);
-    if (step >= 3) {
-        close(sockfd);
+    if (step >= 3) close(sockfd);
+    if (step >= 4) {
         free(enc_txt);
         free(dec_txt);
         free(parent_to_child);
@@ -137,7 +137,8 @@ void signal_handler(int sig_num) {
  */
 
 int main(int argc, char *argv[]) {
-    int i;
+    int i;    
+    int opt = TRUE;                 /* Used when set socket options */
     int mark;
 
     signal(SIGINT, signal_handler);
@@ -148,21 +149,14 @@ int main(int argc, char *argv[]) {
 
     if (argc != 3) {                    /* Check if the arguments number is right or not */
         get_time();
-        printf("[%s] (Process ID #%d) Arguments number is not right! Usage: ./lyrebird <hostname/IP> <port number>\n", out_time, getpid());
-        clean_up(1);
-        exit(EXIT_FAILURE);
-    }
-
-    if ((server = gethostbyname(argv[1])) == NULL) {        /* Get the server IP address */
-        get_time();
-        printf("[%s] (Process ID #%d) Hostname (IP) is not in the right format!\n", out_time, getpid());
+        printf("[%s] (Process ID #%d) Arguments number is not right! Usage: %s <ip address> <port number>\n", out_time, getpid(), argv[0]);
         clean_up(1);
         exit(EXIT_FAILURE);
     }
 
     if ((port_number = atoi(argv[2])) == 0) {               /* Get the server port number */
         get_time();
-        printf("[%s] (Process ID #%d) Can not use this port number for TCP connection!\n", out_time, getpid());
+        printf("[%s] (Process ID #%d) ERROR: Can not use this port number for TCP connection!\n", out_time, getpid());
         clean_up(1);
         exit(EXIT_FAILURE);
     }
@@ -180,9 +174,7 @@ int main(int argc, char *argv[]) {
         if (ifa->ifa_addr == NULL)
             continue;
 
-        int family = ifa->ifa_addr->sa_family;
-
-        if (family != AF_INET)                                                  /* If it is not the IPv4 interface */
+        if (ifa->ifa_addr->sa_family != AF_INET)                                                  /* If it is not the IPv4 interface */
             continue;
 
         if (getnameinfo(ifa->ifa_addr, addr_len, host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) != 0) {         /* If can not get the address information of interface address */
@@ -198,22 +190,48 @@ int main(int argc, char *argv[]) {
         break;                                                                  /* If found a avaliable Ip address, then we break */
     }
 
-    memset(&serv_addr, 0, addr_len);                                            /* Initialize server address config */
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(port_number);
-    memcpy((char *)&serv_addr.sin_addr.s_addr, (char *)server->h_addr, server->h_length);
-
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {                       /* Create socket in server */
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {                       /* Create socket to connect server */
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Create socket failed!\n", out_time, getpid());
         clean_up(2);
         exit(EXIT_FAILURE);
     }
 
-    init_pipe();                                            /* Initialize pipe */
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0) {      /* Set socket option to reuseable address (not necessary but good) */
+        get_time();
+        printf("[%s] (Process ID #%d) ERROR: Can not set socket option!\n", out_time, getpid());
+        clean_up(3);
+        exit(EXIT_FAILURE);
+    }
 
-    enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
-    dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
+    memset(&cli_addr, 0, addr_len);                                            /* Initialize client address config */
+    cli_addr.sin_family = AF_INET;
+    cli_addr.sin_port = htons(0);
+    if (inet_pton(AF_INET, host, &(cli_addr.sin_addr)) <= 0) {
+        get_time();
+        printf("[%s] (Process ID #%d) ERROR: Client host in inet_pton function is not a valid IP address!\n", out_time, getpid());
+        clean_up(3);
+        exit(EXIT_FAILURE);
+    }
+
+    memset(&serv_addr, 0, addr_len);                                            /* Initialize server address config */
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port_number);
+    if (inet_pton(AF_INET, argv[1], &serv_addr.sin_addr) <= 0) {
+        get_time();
+        printf("[%s] (Process ID #%d) ERROR: Server host in inet_pton function is not a valid IP address!\n", out_time, getpid());
+        clean_up(3);
+        exit(EXIT_FAILURE);
+    } 
+
+    if (bind(sockfd, (struct sockaddr *)&cli_addr, addr_len) < 0) {            /* Bind the client socket */
+        get_time();
+        printf("[%s] (Process ID #%d) ERROR: Bind socket failed!\n", out_time, getpid());
+        clean_up(3);
+        exit(EXIT_FAILURE);
+    }
+
+    //fcntl(sockfd, F_SETFL, O_NONBLOCK);
 
     if (connect(sockfd, (struct sockaddr *)&serv_addr, addr_len) < 0) {
         get_time();
@@ -221,6 +239,10 @@ int main(int argc, char *argv[]) {
         clean_up(3);
         exit(EXIT_FAILURE);
     }
+
+    //fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL, 0) & ~O_NONBLOCK);
+
+    init_pipe();                                            /* Initialize pipe */
 
     get_time();
     printf("[%s] lyrebird client: PID %d connected to server %s on port %d.\n", out_time, getpid(), argv[1], port_number);
@@ -230,6 +252,9 @@ int main(int argc, char *argv[]) {
         mark = htonl(DISPATCH_MSG);
         write(sockfd, &mark, sizeof(int));
     }
+
+    enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
+    dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
 
     while (read(sockfd, &mark, sizeof(mark))) {                  /* Always waiting for message from server side */
 
@@ -289,7 +314,7 @@ int main(int argc, char *argv[]) {
                 write(child_to_parent[process_number_now * 2 + 1], &process_number_now, sizeof(int));
             }
 
-            clean_up(3);                                                /* Always remember to free all and close file pointer! */
+            clean_up(4);                                                /* Always remember to free all and close file pointer! */
             close(parent_to_child[process_number_now * 2]);             /* Close used pipes */
             close(child_to_parent[process_number_now * 2 + 1]);
             exit(state);
@@ -320,6 +345,6 @@ int main(int argc, char *argv[]) {
         write(sockfd, &mark, sizeof(int));
     }
 
-    clean_up(3);                                             /* Always remember to free all and close file pointer! */
+    clean_up(4);                                             /* Always remember to free all and close file pointer! */
     return main_flag;
 }

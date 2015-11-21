@@ -59,7 +59,7 @@ More Details can be found in [Assignment 3 - Message Passing & Scheduling](https
 * Empty data and largest data tested (used data set from assignment #2).
 
 ## Reference list
-[Select function - Linux man page](http://linux.die.net/man/2/select)
-[Multiple pipes and forks example](http://www.sfu.ca/~reilande/)
-[C using select() to read from two named pipes (FIFO) - Stackoverflow](http://stackoverflow.com/questions/28519119/c-using-select-to-read-from-two-named-pipes-fifo)
-[Set up arguments each time when using select function - Stackoverflow](http://stackoverflow.com/questions/3324078/why-select-always-return-0-after-the-first-timeout)
+[Beej's Guide to Network Programming](http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html)
+[Sockets Tutorial](http://www.linuxhowtos.org/C_C++/socket.htm)
+[Handle multiple socket connections with fd_set and select on Linux](http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/)
+[The World of Select()](http://www.lowtek.com/sockets/select.html)
