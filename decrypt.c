@@ -125,16 +125,6 @@ int decrypt(char *input, char *output) {
     FILE *fin, *fout;
     int mark;
 
-    //tweets_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
-    //if (tweets_time == NULL) {                          /* If malloc time string failed, can't output time anymore... */
-    //    snprintf(buffer, ERROR_MAXLENGTH, "Malloc tweets_time failed when decrypt file %s in process %d!\n", input, getpid());
-    //    mark = htonl(2);
-    //    write(sockfd, &mark, sizeof(int));
-    //    write(sockfd, host, sizeof(host));
-    //    write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
-    //    return 0;
-    //}
-
     fin = fopen(input, "r");
 
     if (fin == NULL) {                                  /* Check input file is exist or not */
@@ -164,7 +154,7 @@ int decrypt(char *input, char *output) {
             write(sockfd, &mark, sizeof(int));
             write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
             fclose(fin);
-            return EXIT_FAILURE;
+            return MALLOC_FAIL_ERROR;
         }
         if (len != -1) {
             tweets_dec = decrypt_each(tweets_enc);      /* Decrypt each line's tweet */
@@ -186,5 +176,5 @@ int decrypt(char *input, char *output) {
     fclose(fin);
     fclose(fout);
 
-    return flag;
+    return flag? flag: EXIT_SUCCESS;
 }

@@ -29,7 +29,7 @@
 char *enc_txt;                  /* Used to store encrypted file name */
 char *dec_txt;                  /* Used to store decrypted file name */
 char *out_time;                 /* Used to store output time */
-int main_flag = 0;              /* Used to store return value for main function */
+int main_flag = EXIT_SUCCESS;   /* Used to store return value for main function */
 
 pid_t pid;                      /* Used to store fork pid */
 int *pid_array;                 /* Used to store all the child pid (as int) */
@@ -98,6 +98,32 @@ void clean_up(int step) {               /* Always remember to free all and close
 }
 
 /*
+ * Function: Signal_handler
+ * -------------------
+ *   This function is used to handle signal
+ *
+ *   Parameters:
+ *      sig_num: the number of the signal
+ *
+ *   Returns:
+ *      void
+ */
+
+void signal_handler(int sig_num) {
+    switch (sig_num) {
+        case SIGINT:
+            printf("Can not interrupt (signal #%d) this process, because this is a VERY IMPORTANT task!\n", sig_num);
+            break;
+        case SIGQUIT:
+            printf("Can not quit (signal #%d) this process, because this is a VERY IMPORTANT task!\n", sig_num);
+            break;
+        case SIGHUP:
+            printf("Can not exit (signal #%d) this process, because this is a VERY IMPORTANT task!\n", sig_num);
+            break;
+    }
+}
+
+/*
  * Function: Main
  * -------------------
  *   Main function of lyrebird
@@ -113,6 +139,10 @@ void clean_up(int step) {               /* Always remember to free all and close
 int main(int argc, char *argv[]) {
     int i;
     int mark;
+
+    signal(SIGINT, signal_handler);
+    signal(SIGQUIT, signal_handler);
+    signal(SIGHUP, signal_handler);
 
     out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
 
@@ -212,8 +242,8 @@ int main(int argc, char *argv[]) {
             pid = fork();                                   /* Fork! */
             if (pid < 0) {                                  /* If fork failed */
                 get_time();
-                printf("[%s] (Process ID #%d) ERROR: Fork failed!\n", out_time, getpid());
-                main_flag = 1;                              /* Exit non-zero value */
+                printf("[%s] (Process ID #%d) ERROR: Fork failed! Client will exit now without finish its tasks!\n", out_time, getpid());
+                main_flag = EXIT_FAILURE;                              /* Exit non-zero value */
                 break;                                      /* Break and still need to wait for all child processes */
             }
         } else
@@ -230,7 +260,7 @@ int main(int argc, char *argv[]) {
                 write(parent_to_child[process_number_now * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
             } else {
                 fcfs();
-                if (main_flag) break;
+                if (main_flag != EXIT_SUCCESS) break;
             }
         }
 
@@ -248,8 +278,8 @@ int main(int argc, char *argv[]) {
                 if (read(parent_to_child[process_number_now * 2], &enc_txt, sizeof(char) * FILE_MAXLENGTH) == 0) break;    /* Break if parent process's pipe closed */
                 read(parent_to_child[process_number_now * 2], &dec_txt, sizeof(char) * FILE_MAXLENGTH);
                 state = decrypt(enc_txt, dec_txt);
-                if (state == 1) break;                              /* If child decryption meet an fatal error */
-                if (state == 0) {                                   /* If child process is ready to decrypt another file */
+                if (state == MALLOC_FAIL_ERROR) break;                         /* If child decryption meet an fatal error */
+                if (state == EXIT_SUCCESS) {                                   /* If child process is ready to decrypt another file */
                     mark = htonl(SUCCESS_MSG);
                     write(sockfd, &mark, sizeof(int));
                     write(sockfd, enc_txt, sizeof(char) * FILE_MAXLENGTH);
@@ -272,19 +302,22 @@ int main(int argc, char *argv[]) {
     for (i = 0; i < process_number_limit; i++) {            /* Parent process wait for all child processes before exit */
         int state;
         pid_t pid = wait(&state);                           /* Wait until found one child process finished */
-        if (state != 0) {                                   /* If child process terminate unexpectly! */
+        printf("%d\n", state);
+        if (state != EXIT_SUCCESS) {                                   /* If child process terminate unexpectly! */
             get_time();
             printf("[%s] Child process ID #%d did not terminate successfully.\n", out_time, (int)pid);
         }
         close_ctp_pipe_with_pid(pid);                       /* Close the pipe that uses to read messages from exited child process */
     }
 
-    mark = htonl(DISCONNECT_MSG);
-    write(sockfd, &mark, sizeof(int));
-
-    if (main_flag == 0) {
+    if (main_flag == EXIT_SUCCESS) {
+        mark = htonl(DISCONNECT_SUCC_MSG);
+        write(sockfd, &mark, sizeof(int));
         get_time();
         printf("[%s] lyrebird client: PID %d completed its tasks and is exiting successfully.\n", out_time, getpid());
+    } else {
+        mark = htonl(DISCONNECT_FAIL_MSG);
+        write(sockfd, &mark, sizeof(int));
     }
 
     clean_up(3);                                             /* Always remember to free all and close file pointer! */

@@ -30,7 +30,8 @@
 #define DISPATCH_MSG 2
 #define SUCCESS_MSG 3
 #define FAILURE_MSG 4
-#define DISCONNECT_MSG 5
+#define DISCONNECT_SUCC_MSG 5
+#define DISCONNECT_FAIL_MSG 6
 
 extern char *enc_txt;                   /* Used to store encrypted file name */
 extern char *dec_txt;                   /* Used to store decrypted file name */

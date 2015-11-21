@@ -26,7 +26,7 @@
 #include "time.h"
 #include "memwatch.h"
 
-int main_flag = 0;              /* Used to store return value for main function */
+int main_flag = EXIT_SUCCESS;   /* Used to store return value for main function */
 char *enc_txt;                  /* Used to store encrypted file name */
 char *dec_txt;                  /* Used to store decrypted file name */
 char *out_time;                 /* Used to store output time */
@@ -266,7 +266,7 @@ int main(int argc, char *argv[]) {
         if (select(max_fds + 1, &rfds, NULL, NULL, NULL) == -1) {
             get_time();
             fprintf(flog, "[%s] (Process ID #%d) ERROR: Server failed when run select function!\n", out_time, getpid());
-            main_flag = 1;
+            main_flag = EXIT_FAILURE;
             break;
         }
 
@@ -277,7 +277,7 @@ int main(int argc, char *argv[]) {
                     if ((sockfd_new = accept(sockfd, (struct sockaddr *)&cli_addr, &addr_len)) < 0) {   /* Accept new connections from client machine */
                         get_time();
                         fprintf(flog, "[%s] (Process ID #%d) ERROR: Server accept client socket failed!\n", out_time, getpid());
-                        main_flag = 1;
+                        main_flag = EXIT_FAILURE;
                         break;
                     }
                     read(sockfd_new, &read_type, sizeof(read_type));
@@ -285,7 +285,7 @@ int main(int argc, char *argv[]) {
                     if (read_type != CONNECT_MSG) {
                         get_time();
                         fprintf(flog, "[%s] (Process ID #%d) ERROR: Server accept client socket failed!\n", out_time, getpid());
-                        main_flag = 1;
+                        main_flag = EXIT_FAILURE;
                         break;
                     }
                     get_time();
@@ -343,36 +343,73 @@ int main(int argc, char *argv[]) {
                             printf("%d cnt: %d max: %d\n", read_type, cnt_task, max_task);
                             read_flag = 1;
                             break;
-                        case DISCONNECT_MSG:
-                            get_time();
-                            fprintf(flog, "[%s] lyrebird client %s has disconnected expectedly.\n", out_time, read_ip);
-                            for (j = 0; j < CLIENT_MAXNUM; ++j) {
-                                if (sockfd_cli[j] == i) {
-                                    close(i);
-                                    sockfd_cli[j] = 0;
-                                    memset(ipaddr_cli[j], 0, sizeof(ipaddr_cli[j]));
-                                    break;
-                                }
-                            }
-                            break;
                         default:
                             get_time();
                             fprintf(flog, "[%s] (Process ID #%d) ERROR: Server failed when checking message type from client machine!\n", out_time, getpid());
-                            main_flag = 1;
+                            main_flag = EXIT_FAILURE;
                             break;
                     }
                     break;
                 }
             }
-            if (main_flag) break;
+            if (main_flag == EXIT_FAILURE) break;
         }
-        if (main_flag) break;
+        if (main_flag == EXIT_FAILURE) break;
     }
 
+    int remained_cli = 0;
     mark = htonl(0);
     for (i = 0; i < CLIENT_MAXNUM; ++i) {
-        if (sockfd_cli[i])
+        if (sockfd_cli[i]) {
             write(sockfd_cli[i], &mark, sizeof(mark));
+            remained_cli++;
+        }
+    }
+
+    while (remained_cli--) {
+        FD_ZERO(&rfds);
+        FD_SET(sockfd, &rfds);
+        max_fds = sockfd;
+        for (i = 0; i < CLIENT_MAXNUM; i++) {
+            if (sockfd_cli[i] > 0)
+                FD_SET(sockfd_cli[i], &rfds);
+            if (sockfd_cli[i] > max_fds)
+                max_fds = sockfd_cli[i];
+        }
+        if (select(max_fds + 1, &rfds, NULL, NULL, NULL) == -1) {
+            get_time();
+            fprintf(flog, "[%s] (Process ID #%d) ERROR: Server failed when run select function!\n", out_time, getpid());
+            main_flag = EXIT_FAILURE;
+            break;
+        }
+        for (i = 0; i < max_fds + 1; i++) {
+            if (FD_ISSET(i, &rfds)) {
+                read(i, &read_type, sizeof(read_type));
+                read_type = ntohl(read_type);
+                read_ip = get_host_by_sockfd(i);
+                printf("MSG: %d\n", read_type);
+                if (read_type == DISCONNECT_SUCC_MSG || read_type == DISCONNECT_FAIL_MSG) {
+                    get_time();
+                    if (read_type == DISCONNECT_SUCC_MSG)
+                        fprintf(flog, "[%s] lyrebird client %s has disconnected expectedly.\n", out_time, read_ip);
+                    if (read_type == DISCONNECT_FAIL_MSG)
+                        fprintf(flog, "[%s] lyrebird client %s has disconnected unexpectedly.\n", out_time, read_ip);
+                    for (j = 0; j < CLIENT_MAXNUM; ++j) {
+                        if (sockfd_cli[j] == i) {
+                            close(i);
+                            sockfd_cli[j] = 0;
+                            memset(ipaddr_cli[j], 0, sizeof(ipaddr_cli[j]));
+                            break;
+                        }
+                    }
+                } else {
+                    get_time();
+                    fprintf(flog, "[%s] (Process ID #%d) ERROR: Server failed when checking message type from client machine!\n", out_time, getpid());
+                    main_flag = EXIT_FAILURE;
+                }
+                break;
+            }
+        }
     }
 
     get_time();                                                 /* Print out the server information */
