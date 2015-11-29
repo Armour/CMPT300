@@ -137,7 +137,7 @@ void signal_handler(int sig_num) {
  */
 
 int main(int argc, char *argv[]) {
-    int i;    
+    int i;
     int opt = TRUE;                 /* Used when set socket options */
     int mark;
 
@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
     memset(&cli_addr, 0, addr_len);                                            /* Initialize client address config */
     cli_addr.sin_family = AF_INET;
     cli_addr.sin_port = htons(0);
-    if (inet_pton(AF_INET, host, &(cli_addr.sin_addr)) <= 0) {
+    if (inet_pton(AF_INET, host, &cli_addr.sin_addr) <= 0) {
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Client host in inet_pton function is not a valid IP address!\n", out_time, getpid());
         clean_up(3);
@@ -222,7 +222,7 @@ int main(int argc, char *argv[]) {
         printf("[%s] (Process ID #%d) ERROR: Server host in inet_pton function is not a valid IP address!\n", out_time, getpid());
         clean_up(3);
         exit(EXIT_FAILURE);
-    } 
+    }
 
     if (bind(sockfd, (struct sockaddr *)&cli_addr, addr_len) < 0) {            /* Bind the client socket */
         get_time();
