@@ -24,7 +24,6 @@
 #include "dec_func.h"
 #include "line_io.h"
 #include "time.h"
-#include "scheduling.h"
 #include "memwatch.h"
 
 int len = 0;                                /* Length of tweet */
@@ -35,7 +34,6 @@ char *group_char;                           /* Used to store each group of chara
 char *tweets_time;                          /* Used to store output time */
 unsigned long long *cipher_number;          /* Used to store cipher number */
 unsigned long long *ptext_number;           /* Used to store plain-text number */
-char buffer[ERROR_MAXLENGTH];
 
 /*
  * Function: decrypt_each
@@ -121,27 +119,20 @@ char *decrypt_each(char *tweets_enc) {
  *      return 0 for normal exit
  */
 
-int decrypt(char *input, char *output) {
+int decrypt(char *input, char *output, char *err_buffer) {
     FILE *fin, *fout;
-    int mark;
 
     fin = fopen(input, "r");
 
     if (fin == NULL) {                                  /* Check input file is exist or not */
-        snprintf(buffer, ERROR_MAXLENGTH, "Unable to open input file %s in process %d!\n", input, getpid());
-        mark = htonl(FAILURE_MSG);
-        write(sockfd, &mark, sizeof(int));
-        write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
+        snprintf(err_buffer, ERROR_MAXLENGTH, "Unable to open input file %s in process %d!\n", input, getpid());
         return OPEN_FILE_ERROR;
     }
 
     fout = fopen(output, "w+");
 
     if (fout == NULL) {                                 /* Check if output file opened successfully */
-        snprintf(buffer, ERROR_MAXLENGTH, "Create output file failed when decrypt file %s in process %d!\n", input, getpid());
-        mark = htonl(FAILURE_MSG);
-        write(sockfd, &mark, sizeof(int));
-        write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
+        snprintf(err_buffer, ERROR_MAXLENGTH, "Create output file failed when decrypt file %s in process %d!\n", input, getpid());
         fclose(fin);
         return OPEN_FILE_ERROR;
     }
@@ -149,20 +140,14 @@ int decrypt(char *input, char *output) {
     while (!feof(fin)) {
         tweets_enc = input_line(fin, &len);             /* Get each line's tweet from input file */
         if (tweets_enc == NULL) {
-            snprintf(buffer, ERROR_MAXLENGTH, "Malloc tweets_enc string failed when decrypt file %s in process %d!\n", input, getpid());
-            mark = htonl(FAILURE_MSG);
-            write(sockfd, &mark, sizeof(int));
-            write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
+            snprintf(err_buffer, ERROR_MAXLENGTH, "Malloc tweets_enc string failed when decrypt file %s in process %d!\n", input, getpid());
             fclose(fin);
             return MALLOC_FAIL_ERROR;
         }
         if (len != -1) {
             tweets_dec = decrypt_each(tweets_enc);      /* Decrypt each line's tweet */
             if (flag == MALLOC_FAIL_ERROR) {            /* If there is some unexpected problems, exit */
-                snprintf(buffer, ERROR_MAXLENGTH, "Malloc failed in decrypt_each function when decrypt file %s in process %d!\n", input, getpid());
-                mark = htonl(FAILURE_MSG);
-                write(sockfd, &mark, sizeof(int));
-                write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
+                snprintf(err_buffer, ERROR_MAXLENGTH, "Malloc failed in decrypt_each function when decrypt file %s in process %d!\n", input, getpid());
                 free(tweets_dec);
                 free(tweets_enc);
                 break;

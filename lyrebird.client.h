@@ -32,6 +32,11 @@
 #define TRUE 1
 #define FALSE 0
 
+#define CLEAN_TO_TIME 1
+#define CLEAN_TO_IFADDR 2
+#define CLEAN_TO_SOCKET 3
+#define CLEAN_ALL 4
+
 /* Used to get current time in specify format */
 void get_time(void);
 

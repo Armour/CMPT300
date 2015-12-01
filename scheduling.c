@@ -39,31 +39,69 @@
 
 void fcfs(void) {
     int i;
-    int state;                              /* Return value of select function */
+    char buffer[ERROR_MAXLENGTH];
+    printf("Before fcfs select! \n");
     init_select();                          /* Every time we need to initialize file descriptor set */
-    state = select(max_descriptor + 1, &rfds, NULL, NULL, NULL);
-    if (state == -1) {                      /* If select function failed */
+    if (select(max_descriptor + 1, &rfds, NULL, NULL, NULL) == -1) {                      /* If select function failed */
         get_time();
-        printf("[%s] (Process ID #%d) ERROR: Select function failed, it returned -1.\n", out_time, getpid());
+        printf("[%s] (Process ID #%d) ERROR: Select function failed.\n", out_time, getpid());
         main_flag = 1;
-    } else if (state) {                     /* If select is OK */
-        for (i = 0; i < process_number_limit; ++i) {
-            if (FD_ISSET(child_to_parent[i * 2], &rfds)) {
-                int message;                            /* The message that read from child process's pipe */
-                read(child_to_parent[i * 2], &message, sizeof(int));
-                if (message == i) {                     /* If message from child process shows it is ready */
+        return;
+    }
+    printf("After fcfs select! \n");
+    for (i = 0; i < process_number_limit; ++i) {            /* If select is OK */
+        if (FD_ISSET(child_to_parent[i * 2], &rfds)) {
+            uint32_t message;                               /* The message that read from child process's pipe */
+            uint32_t mark;                                  /* The mark that used to write to server side */
+            read(child_to_parent[i * 2], &message, sizeof(uint32_t));
+            message = ntohl(message);
+            printf("Get child message: %u!!!!\n", message);
+            switch (message) {
+                case CHILD_PROCESS_READY:                    /* If message from child process shows it is ready */
                     get_time();
                     printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + i), enc_txt);
                     write(parent_to_child[i * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
                     write(parent_to_child[i * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
                     break;
-                } else {                                /* If message is not right */
+                case CHILD_PROCESS_SUCCESS:
+                    get_time();
+                    printf("[%s] Child process ID #%d success! decrypt %s.\n", out_time, *(pid_array + i), enc_txt);
+                    mark = htonl(SUCCESS_MSG);
+                    write(sockfd, &mark, sizeof(uint32_t));
+                    fprintf(fuck, "%u\n", ntohl(mark));
+                    write(sockfd, enc_txt, sizeof(char) * FILE_MAXLENGTH);
+                    fprintf(fuck, "%s\n", enc_txt);
+                    mark = htonl(getpid());
+                    write(sockfd, &mark, sizeof(uint32_t));
+                    fprintf(fuck, "%u\n", ntohl(mark));
+                    break;
+                case CHILD_PROCESS_FAILURE:
+                    get_time();
+                    printf("[%s] Child process ID #%d have error when decrypt %s!\n", out_time, *(pid_array + i), enc_txt);
+                    read(child_to_parent[i * 2], buffer, sizeof(char) * ERROR_MAXLENGTH);
+                    mark = htonl(FAILURE_MSG);
+                    write(sockfd, &mark, sizeof(uint32_t));
+                    fprintf(fuck, "%u\n", mark);
+                    write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
+                    fprintf(fuck, "%s\n", buffer);
+                    break;
+                case CHILD_PROCESS_WARNING:
+                    get_time();
+                    printf("[%s] Child process ID #%d have warning when decrypt %s!\n", out_time, *(pid_array + i), enc_txt);
+                    read(child_to_parent[i * 2], buffer, sizeof(char) * ERROR_MAXLENGTH);
+                    mark = htonl(FAILURE_MSG);
+                    write(sockfd, &mark, sizeof(uint32_t));
+                    fprintf(fuck, "%u\n", mark);
+                    write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
+                    fprintf(fuck, "%s\n", buffer);
+                    break;
+               default:                                /* If message is not right */
                     get_time();
                     printf("[%s] (Process ID #%d) ERROR: Wrong message has been read from pipe after select.\n", out_time, getpid());
                     main_flag = 1;
                     break;
-                }
             }
         }
     }
+    printf("After fcfs!\n");
 }

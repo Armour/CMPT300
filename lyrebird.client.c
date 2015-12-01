@@ -42,15 +42,15 @@ int *child_to_parent;           /* Pipe that used to transmit message from child
 fd_set rfds;                    /* The set of file descriptor */
 int max_descriptor;             /* The max number of file descriptor */
 
-int port_number;
-struct hostent *server;
+int port_number;                        /* The server port number */
+char host[NI_MAXHOST];                  /* Used to store the return value of getnameinfo function */
+struct ifaddrs *ifaddr, *ifa;           /* Used to store the return value of getifaddrs function */
 
-int sockfd;
-socklen_t addr_len;
-struct sockaddr_in serv_addr, cli_addr;
+int sockfd;                                     /* Socket file descriptor */
+socklen_t addr_len;                             /* The size of sockaddr_in */
+struct sockaddr_in serv_addr, cli_addr;         /* Used to store the server and client address information */
 
-struct ifaddrs *ifaddr, *ifa;   /* Used to store the return value of getifaddrs function */
-char host[NI_MAXHOST];          /* Used to store the return value of getnameinfo function */
+FILE *fuck;
 
 /*
  * Function: Get_time
@@ -85,10 +85,10 @@ void get_time(void) {
  */
 
 void clean_up(int step) {               /* Always remember to free all and close file pointer! */
-    if (step >= 1) free(out_time);
-    if (step >= 2) freeifaddrs(ifaddr);
-    if (step >= 3) close(sockfd);
-    if (step >= 4) {
+    if (step >= CLEAN_TO_TIME) free(out_time);
+    if (step >= CLEAN_TO_IFADDR) freeifaddrs(ifaddr);
+    if (step >= CLEAN_TO_SOCKET) close(sockfd);
+    if (step >= CLEAN_ALL) {
         free(enc_txt);
         free(dec_txt);
         free(parent_to_child);
@@ -139,80 +139,82 @@ void signal_handler(int sig_num) {
 int main(int argc, char *argv[]) {
     int i;
     int opt = TRUE;                 /* Used when set socket options */
-    int mark;
+    uint32_t mark;
 
-    signal(SIGINT, signal_handler);
-    signal(SIGQUIT, signal_handler);
-    signal(SIGHUP, signal_handler);
+    fuck = fopen("shit.txt", "w");             /* Output log file */
+
+    //signal(SIGINT, signal_handler);
+    //signal(SIGQUIT, signal_handler);
+    //signal(SIGHUP, signal_handler);
 
     out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
 
     if (argc != 3) {                    /* Check if the arguments number is right or not */
         get_time();
         printf("[%s] (Process ID #%d) Arguments number is not right! Usage: %s <ip address> <port number>\n", out_time, getpid(), argv[0]);
-        clean_up(1);
+        clean_up(CLEAN_TO_TIME);
         exit(EXIT_FAILURE);
     }
 
     if ((port_number = atoi(argv[2])) == 0) {               /* Get the server port number */
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Can not use this port number for TCP connection!\n", out_time, getpid());
-        clean_up(1);
+        clean_up(CLEAN_TO_TIME);
         exit(EXIT_FAILURE);
     }
 
-    if (getifaddrs(&ifaddr) == -1) {        /* Get the ip address of this machine and check if it failed */
-        get_time();
-        printf("[%s] (Process ID #%d) ERROR: Can not get the interface address of this machine!\n", out_time, getpid());
-        clean_up(1);
-        exit(EXIT_FAILURE);
-    }
-
+//    if (getifaddrs(&ifaddr) == -1) {        /* Get the ip address of this machine and check if it failed */
+//        get_time();
+//        printf("[%s] (Process ID #%d) ERROR: Can not get the interface address of this machine!\n", out_time, getpid());
+//        clean_up(CLEAN_TO_TIME);
+//        exit(EXIT_FAILURE);
+//    }
+//
     addr_len = sizeof(struct sockaddr_in);
-
-    for (ifa = ifaddr, i = 0; ifa != NULL; ifa = ifa->ifa_next, i++) {          /* Iterate each interface addresses and get the IP address */
-        if (ifa->ifa_addr == NULL)
-            continue;
-
-        if (ifa->ifa_addr->sa_family != AF_INET)                                                  /* If it is not the IPv4 interface */
-            continue;
-
-        if (getnameinfo(ifa->ifa_addr, addr_len, host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) != 0) {         /* If can not get the address information of interface address */
-            get_time();
-            printf("[%s] (Process ID #%d) ERROR: Can not get the address information of interface address!\n", out_time, getpid());
-            clean_up(2);
-            exit(EXIT_FAILURE);
-        }
-
-        if (strcmp(host, "0.0.0.0") == 0 || strcmp(host, "127.0.0.1") == 0)     /* Filter the special IP address "0.0.0.0" and "127.0.0.1" */
-            continue;
-
-        break;                                                                  /* If found a avaliable Ip address, then we break */
-    }
+//
+//    for (ifa = ifaddr, i = 0; ifa != NULL; ifa = ifa->ifa_next, i++) {          /* Iterate each interface addresses and get the IP address */
+//        if (ifa->ifa_addr == NULL)
+//            continue;
+//
+//        if (ifa->ifa_addr->sa_family != AF_INET)                                                  /* If it is not the IPv4 interface */
+//            continue;
+//
+//        if (getnameinfo(ifa->ifa_addr, addr_len, host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) != 0) {         /* If can not get the address information of interface address */
+//            get_time();
+//            printf("[%s] (Process ID #%d) ERROR: Can not get the address information of interface address!\n", out_time, getpid());
+//            clean_up(CLEAN_TO_IFADDR);
+//            exit(EXIT_FAILURE);
+//        }
+//
+//        if (strcmp(host, "0.0.0.0") == 0 || strcmp(host, "127.0.0.1") == 0)     /* Filter the special IP address "0.0.0.0" and "127.0.0.1" */
+//            continue;
+//
+//        break;                                                                  /* If found a avaliable Ip address, then we break */
+//    }
 
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {                       /* Create socket to connect server */
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Create socket failed!\n", out_time, getpid());
-        clean_up(2);
+        clean_up(CLEAN_TO_IFADDR);
         exit(EXIT_FAILURE);
     }
 
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0) {      /* Set socket option to reuseable address (not necessary but good) */
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Can not set socket option!\n", out_time, getpid());
-        clean_up(3);
+        clean_up(CLEAN_TO_SOCKET);
         exit(EXIT_FAILURE);
     }
 
-    memset(&cli_addr, 0, addr_len);                                            /* Initialize client address config */
-    cli_addr.sin_family = AF_INET;
-    cli_addr.sin_port = htons(0);
-    if (inet_pton(AF_INET, host, &cli_addr.sin_addr) <= 0) {
-        get_time();
-        printf("[%s] (Process ID #%d) ERROR: Client host in inet_pton function is not a valid IP address!\n", out_time, getpid());
-        clean_up(3);
-        exit(EXIT_FAILURE);
-    }
+//    memset(&cli_addr, 0, addr_len);                                            /* Initialize client address config */
+//    cli_addr.sin_family = AF_INET;
+//    cli_addr.sin_port = htons(0);
+//    if (inet_pton(AF_INET, host, &cli_addr.sin_addr) <= 0) {
+//        get_time();
+//        printf("[%s] (Process ID #%d) ERROR: Client host in inet_pton function is not a valid IP address!\n", out_time, getpid());
+//        clean_up(CLEAN_TO_SOCKET);
+//        exit(EXIT_FAILURE);
+//    }
 
     memset(&serv_addr, 0, addr_len);                                            /* Initialize server address config */
     serv_addr.sin_family = AF_INET;
@@ -220,48 +222,49 @@ int main(int argc, char *argv[]) {
     if (inet_pton(AF_INET, argv[1], &serv_addr.sin_addr) <= 0) {
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Server host in inet_pton function is not a valid IP address!\n", out_time, getpid());
-        clean_up(3);
+        clean_up(CLEAN_TO_SOCKET);
         exit(EXIT_FAILURE);
     }
 
-    if (bind(sockfd, (struct sockaddr *)&cli_addr, addr_len) < 0) {            /* Bind the client socket */
-        get_time();
-        printf("[%s] (Process ID #%d) ERROR: Bind socket failed!\n", out_time, getpid());
-        clean_up(3);
-        exit(EXIT_FAILURE);
-    }
-
-    //fcntl(sockfd, F_SETFL, O_NONBLOCK);
+//    if (bind(sockfd, (struct sockaddr *)&cli_addr, addr_len) < 0) {            /* Bind the client socket */
+//        get_time();
+//        printf("[%s] (Process ID #%d) ERROR: Bind socket failed!\n", out_time, getpid());
+//        clean_up(CLEAN_TO_SOCKET);
+//        exit(EXIT_FAILURE);
+//    }
 
     if (connect(sockfd, (struct sockaddr *)&serv_addr, addr_len) < 0) {
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Connect to server %s:%d failed!\n", out_time, getpid(), argv[1], port_number);
-        clean_up(3);
+        clean_up(CLEAN_TO_SOCKET);
         exit(EXIT_FAILURE);
     }
-
-    //fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL, 0) & ~O_NONBLOCK);
 
     init_pipe();                                            /* Initialize pipe */
 
     get_time();
     printf("[%s] lyrebird client: PID %d connected to server %s on port %d.\n", out_time, getpid(), argv[1], port_number);
+
     mark = htonl(CONNECT_MSG);
-    write(sockfd, &mark, sizeof(int));
+    write(sockfd, &mark, sizeof(uint32_t));
+    fprintf(fuck, "connect: %u\n", ntohl(mark));
+
     for (i = 0; i < process_number_limit; ++i) {
         mark = htonl(DISPATCH_MSG);
-        write(sockfd, &mark, sizeof(int));
+        write(sockfd, &mark, sizeof(uint32_t));
+        fprintf(fuck, "dispatch: %u\n", ntohl(mark));
     }
 
     enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
     dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
 
-    while (read(sockfd, &mark, sizeof(mark))) {                  /* Always waiting for message from server side */
+    while (read(sockfd, &mark, sizeof(uint32_t))) {                  /* Always waiting for message from server side */
 
-        if (ntohl(mark) == 0) break;
+        if (ntohl(mark) == CLIENT_EXIT_MSG) break;
         read(sockfd, enc_txt, sizeof(char) * FILE_MAXLENGTH);
         read(sockfd, dec_txt, sizeof(char) * FILE_MAXLENGTH);
 
+        printf("!!!!start!!! process_number_now: %d\n", process_number_now);
         if (process_number_now + 1 < process_number_limit) {            /* If not exceed the max number of process */
             process_number_now++;
             pid = fork();                                   /* Fork! */
@@ -274,8 +277,9 @@ int main(int argc, char *argv[]) {
         } else
             process_number_now = process_number_limit;
 
-        if (pid != 0) {                                     /* If fork successful and is in parent process */
+        if (pid != 0) {                                                 /* If fork successful and is in parent process */
             if (process_number_now < process_number_limit) {            /* First round we just assgin each task to each child process */
+                printf("new!\n");
                 pid_array[process_number_now] = (int)pid;               /* Store child pid into array */
                 close(parent_to_child[process_number_now * 2]);
                 close(child_to_parent[process_number_now * 2 + 1]);     /* Close pipes that will not be used */
@@ -283,38 +287,56 @@ int main(int argc, char *argv[]) {
                 printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + process_number_now), enc_txt);
                 write(parent_to_child[process_number_now * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
                 write(parent_to_child[process_number_now * 2 + 1], dec_txt, sizeof(char) * FILE_MAXLENGTH);
+                printf("new end!\n");
             } else {
+                printf("new in fcfs!\n");
                 fcfs();
+                printf("end in fcfs!\n");
                 if (main_flag != EXIT_SUCCESS) break;
             }
         }
 
         if (pid == 0) {                                             /* If in child process */
             int state = 0;
+            uint32_t mark;
             char enc_txt[FILE_MAXLENGTH];
             char dec_txt[FILE_MAXLENGTH];
+            char err_buffer[ERROR_MAXLENGTH];                       /* A buffer used to store the error message */
 
             close_ptc_pipes_except(process_number_now);             /* Close other pipes except used ptc and ctp */
             close_ctp_pipes_except(process_number_now);
             close(parent_to_child[process_number_now * 2 + 1]);
             close(child_to_parent[process_number_now * 2]);
 
-            while (1) {                                             /* Keep decrpting until break */
+            while (TRUE) {                                             /* Keep decrpting until break */
                 if (read(parent_to_child[process_number_now * 2], &enc_txt, sizeof(char) * FILE_MAXLENGTH) == 0) break;    /* Break if parent process's pipe closed */
                 read(parent_to_child[process_number_now * 2], &dec_txt, sizeof(char) * FILE_MAXLENGTH);
-                state = decrypt(enc_txt, dec_txt);
-                if (state == MALLOC_FAIL_ERROR) break;                         /* If child decryption meet an fatal error */
-                if (state == EXIT_SUCCESS) {                                   /* If child process is ready to decrypt another file */
-                    mark = htonl(SUCCESS_MSG);
-                    write(sockfd, &mark, sizeof(int));
-                    write(sockfd, enc_txt, sizeof(char) * FILE_MAXLENGTH);
-                    mark = htonl(getpid());
-                    write(sockfd, &mark, sizeof(int));
+                state = decrypt(enc_txt, dec_txt, err_buffer);
+                printf("Decrypt state: %d\n", state);
+                if (state == MALLOC_FAIL_ERROR) {                         /* If child decryption meet an fatal error */
+                    printf("Malloc failed!\n");
+                    mark = htonl(CHILD_PROCESS_FAILURE);
+                    write(child_to_parent[process_number_now * 2 + 1], &mark, sizeof(uint32_t));
+                    write(child_to_parent[process_number_now * 2 + 1], err_buffer, sizeof(char) * ERROR_MAXLENGTH);
+                    break;
                 }
-                write(child_to_parent[process_number_now * 2 + 1], &process_number_now, sizeof(int));
+                if (state == OPEN_FILE_ERROR) {                                   /* If child process is ready to decrypt another file */
+                    printf("Open file failed!\n");
+                    mark = htonl(CHILD_PROCESS_WARNING);
+                    write(child_to_parent[process_number_now * 2 + 1], &mark, sizeof(uint32_t));
+                    write(child_to_parent[process_number_now * 2 + 1], err_buffer, sizeof(char) * ERROR_MAXLENGTH);
+                }
+                if (state == EXIT_SUCCESS) {                                   /* If child process is ready to decrypt another file */
+                    printf("Success!\n");
+                    mark = htonl(CHILD_PROCESS_SUCCESS);
+                    write(child_to_parent[process_number_now * 2 + 1], &mark, sizeof(uint32_t));
+                }
+                printf("Ready!\n");
+                mark = htonl(CHILD_PROCESS_READY);
+                write(child_to_parent[process_number_now * 2 + 1], &mark, sizeof(uint32_t));
             }
 
-            clean_up(4);                                                /* Always remember to free all and close file pointer! */
+            clean_up(CLEAN_ALL);                                                /* Always remember to free all and close file pointer! */
             close(parent_to_child[process_number_now * 2]);             /* Close used pipes */
             close(child_to_parent[process_number_now * 2 + 1]);
             exit(state);
@@ -337,14 +359,16 @@ int main(int argc, char *argv[]) {
 
     if (main_flag == EXIT_SUCCESS) {
         mark = htonl(DISCONNECT_SUCC_MSG);
-        write(sockfd, &mark, sizeof(int));
+        write(sockfd, &mark, sizeof(uint32_t));
+    fprintf(fuck, "%u\n", ntohl(mark));
         get_time();
         printf("[%s] lyrebird client: PID %d completed its tasks and is exiting successfully.\n", out_time, getpid());
     } else {
         mark = htonl(DISCONNECT_FAIL_MSG);
-        write(sockfd, &mark, sizeof(int));
+        write(sockfd, &mark, sizeof(uint32_t));
+    fprintf(fuck, "%u\n", ntohl(mark));
     }
 
-    clean_up(4);                                             /* Always remember to free all and close file pointer! */
+    clean_up(CLEAN_ALL);                                             /* Always remember to free all and close file pointer! */
     return main_flag;
 }

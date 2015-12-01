@@ -27,9 +27,18 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
+#define CLIENT_MAXNUM 32
+
 #define TRUE 1
 #define FALSE 0
-#define CLIENT_MAXNUM 32
+
+#define CLEAN_TO_TXT 0
+#define CLEAN_TO_TIME 1
+#define CLEAN_TO_CONFIG 2
+#define CLEAN_TO_LOG 3
+#define CLEAN_TO_IFADDR 4
+#define CLEAN_TO_SOCKET 5
+#define CLEAN_ALL 6
 
 /* Used to get current time in specify format */
 void get_time(void);

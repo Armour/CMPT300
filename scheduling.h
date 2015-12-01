@@ -26,12 +26,21 @@
 
 #define FILE_MAXLENGTH 1030
 #define ERROR_MAXLENGTH (FILE_MAXLENGTH + 100)
+
 #define CONNECT_MSG 1
 #define DISPATCH_MSG 2
 #define SUCCESS_MSG 3
 #define FAILURE_MSG 4
 #define DISCONNECT_SUCC_MSG 5
 #define DISCONNECT_FAIL_MSG 6
+
+#define CLIENT_EXIT_MSG 0
+#define CLIENT_WORK_MSG 1
+
+#define CHILD_PROCESS_READY 0
+#define CHILD_PROCESS_SUCCESS 1
+#define CHILD_PROCESS_FAILURE 2
+#define CHILD_PROCESS_WARNING 3
 
 extern char *enc_txt;                   /* Used to store encrypted file name */
 extern char *dec_txt;                   /* Used to store decrypted file name */
@@ -47,6 +56,9 @@ extern int *child_to_parent;            /* Pipe that used to transmit message fr
 
 extern fd_set rfds;                     /* The set of file descriptor */
 extern int max_descriptor;              /* The max number of file descriptor */
+
+extern FILE *fuck;
+extern int sockfd;
 
 /* Get time format */
 extern void get_time(void);
