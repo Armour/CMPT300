@@ -25,6 +25,7 @@
 #include "scheduling.h"
 #include "time.h"
 #include "memwatch.h"
+#include <errno.h>
 
 int main_flag = EXIT_SUCCESS;   /* Used to store return value for main function */
 char *enc_txt;                  /* Used to store encrypted file name */
@@ -238,10 +239,9 @@ int select_func(void) {
     return 0;
 }
 
-uint32_t read_client_msg(int sock_num) {
+uint32_t read_client_msg(int sockfd) {
     uint32_t msg;
-    read(sock_num, &msg, sizeof(uint32_t));
-    fprintf(fuck, "%u\n", ntohl(msg));
+    read(sockfd, &msg, sizeof(uint32_t));
     return ntohl(msg);
 }
 
@@ -281,8 +281,8 @@ void store_client_ip(void) {
     int i;
     for (i = 0; i < CLIENT_MAXNUM; ++i) {
         if (sockfd_cli[i] == 0) {
-            printf("New client store in array: %d\n", i);
             sockfd_cli[i] = sockfd_new;
+            printf("new client in sokcet %d array %d\n", sockfd_new, i);
             memset(ipaddr_cli[i], 0, sizeof(ipaddr_cli[i]));
             strcpy(ipaddr_cli[i], ip_buffer);
             break;
@@ -350,7 +350,7 @@ int ask_clients_quit(void) {
     int i;
     int remained_cli = 0;
     for (i = 0; i < CLIENT_MAXNUM; ++i) {
-        if (sockfd_cli[i]) {
+        if (sockfd_cli[i] > 0) {
             uint32_t mark = CLIENT_EXIT_MSG;
             mark = htonl(mark);
             write(sockfd_cli[i], &mark, sizeof(uint32_t));
@@ -362,14 +362,16 @@ int ask_clients_quit(void) {
 
 void wait_clients_quit(int remained_cli) {
     int i, j;
-    while (remained_cli--) {
+    uint32_t read_type;
+    while (remained_cli) {
         init_select();
         if (select_func() == -1) break;
         for (i = 0; i < max_fds + 1; i++) {
             if (FD_ISSET(i, &rfds)) {
                 client_ip = get_host_by_sockfd(i);
+                printf("Wait for %s socket %d\n", client_ip, i);
                 read_type = read_client_msg(i);
-                printf("RMSG: %u\n", read_type);
+                printf("RMSG %u\n", read_type);
                 if (read_type == DISCONNECT_SUCC_MSG || read_type == DISCONNECT_FAIL_MSG) {
                     get_time();
                     if (read_type == DISCONNECT_SUCC_MSG)
@@ -384,10 +386,12 @@ void wait_clients_quit(int remained_cli) {
                             break;
                         }
                     }
+                    remained_cli--;
+                    printf("Remained: %d\n", remained_cli);
                 } else {
                     get_time();
                     fprintf(flog, "[%s] (Process ID #%d) ERROR: Server failed when checking message type from client machine!\n", out_time, getpid());
-                    main_flag = EXIT_FAILURE;
+                    //main_flag = EXIT_FAILURE;
                 }
                 break;
             }
@@ -478,10 +482,8 @@ int main(int argc, char *argv[]) {
 
         if (finish_flag && cnt_task == max_task) break;
 
-        printf("Before select!\n");
         init_select();
         if (select_func() == -1) break;
-        printf("After select!\n");
 
         for (i = 0; i < max_fds + 1; i++) {
             if (FD_ISSET(i, &rfds)) {
@@ -506,7 +508,7 @@ int main(int argc, char *argv[]) {
     }
 
     int remained_cli = ask_clients_quit();
-    printf("Remaind: %d\n", remained_cli);
+    printf("Total Remained Client: %d\n", remained_cli);
     wait_clients_quit(remained_cli);
     quit_server();
 

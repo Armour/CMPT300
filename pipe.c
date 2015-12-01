@@ -43,7 +43,7 @@ void init_pipe(void) {
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Malloc parent_to_child failed!\n", out_time, getpid());
         free(out_time);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     child_to_parent = (int *)malloc(sizeof(int) * process_number_limit * 2);
@@ -52,7 +52,7 @@ void init_pipe(void) {
         printf("[%s] (Process ID #%d) ERROR: Malloc child_to_parent failed!\n", out_time, getpid());
         free(out_time);
         free(parent_to_child);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     pid_array = (int *)malloc(sizeof(int) * process_number_limit);
@@ -62,10 +62,22 @@ void init_pipe(void) {
         free(out_time);
         free(parent_to_child);
         free(child_to_parent);
-        exit(1);
+        exit(EXIT_FAILURE);
+    }
+
+    is_free = (int *)malloc(sizeof(int) * process_number_limit);
+    if (is_free == NULL) {                                            /* Create child pid array and check whether failed or not */
+        get_time();
+        printf("[%s] (Process ID #%d) ERROR: Malloc is_free failed!\n", out_time, getpid());
+        free(out_time);
+        free(parent_to_child);
+        free(child_to_parent);
+        free(pid_array);
+        exit(EXIT_FAILURE);
     }
 
     memset(pid_array, 0, sizeof(int) * process_number_limit);
+    memset(is_free, 0, sizeof(int) * process_number_limit);
 
     for (i = 0; i < process_number_limit; ++i) {
         if (pipe(parent_to_child + i * 2)) {                            /* Create pipe from parent to child */
@@ -75,7 +87,8 @@ void init_pipe(void) {
             free(parent_to_child);
             free(child_to_parent);
             free(pid_array);
-            exit(1);                                                    /* If create pipe failed */
+            free(is_free);
+            exit(EXIT_FAILURE);                                                    /* If create pipe failed */
         }
         if (pipe(child_to_parent + i * 2)) {                            /* Create pipe from child to parent */
             get_time();
@@ -84,7 +97,8 @@ void init_pipe(void) {
             free(parent_to_child);
             free(child_to_parent);
             free(pid_array);
-            exit(1);                                                    /* If create pipe failed */
+            free(is_free);
+            exit(EXIT_FAILURE);                                                    /* If create pipe failed */
         }
     }
 }
@@ -110,6 +124,33 @@ void init_select(void) {
         if (child_to_parent[i * 2] > max)
             max = child_to_parent[i * 2];                       /* Calculate max file descriptor */
     }
+    max_descriptor = max;
+}
+
+/*
+ * Function: Init_select
+ * -------------------
+ *   This function is used to prepare select function for pipe in different processes
+ *
+ *   Parameters:
+ *      no parameters
+ *
+ *   Returns:
+ *      void
+ */
+
+void init_select_with_socket(int sockfd) {
+    int i;
+    int max = 0;
+    FD_ZERO(&rfds);                                             /* First initialize set to empty */
+    for (i = 0; i < process_number_limit; ++i) {
+        FD_SET(child_to_parent[i * 2], &rfds);                  /* Add file descriptor to set */
+        if (child_to_parent[i * 2] > max)
+            max = child_to_parent[i * 2];                       /* Calculate max file descriptor */
+    }
+    FD_SET(sockfd, &rfds);                  /* Add file descriptor to set */
+    if (sockfd > max)
+        max = sockfd;
     max_descriptor = max;
 }
 
@@ -208,7 +249,7 @@ void close_ctp_pipe_with_pid(int pid) {
 
 void read_rmng_msg(void) {
     int i;
-    for (i = 0; i < process_number_now; i++) {          /* Read all remaining message in child processes */
+    for (i = 0; i < process_number_limit; i++) {          /* Read all remaining message in child processes */
         int message;
         while (read(child_to_parent[i * 2], &message, sizeof(int)));
     }

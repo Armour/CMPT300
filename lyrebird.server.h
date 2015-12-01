@@ -29,9 +29,6 @@
 
 #define CLIENT_MAXNUM 32
 
-#define TRUE 1
-#define FALSE 0
-
 #define CLEAN_TO_TXT 0
 #define CLEAN_TO_TIME 1
 #define CLEAN_TO_CONFIG 2

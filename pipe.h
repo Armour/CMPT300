@@ -30,6 +30,7 @@ extern char *out_time;                  /* Used to store output time */
 
 extern pid_t pid;                       /* Used to store fork pid */
 extern int *pid_array;                  /* Used to store all the child pid (as int) */
+extern int *is_free;                    /* Used to show if a child process with a pid is free now */
 extern int process_number_limit;        /* The max number of processes that can use now */
 extern int process_number_now;          /* The number of processes that already been used now */
 
@@ -47,6 +48,9 @@ void init_pipe(void);
 
 /* Used to prepare select function for pipe in different procesors  */
 void init_select(void);
+
+/* Used to prepare select function for pipe in different procesors  */
+void init_select_with_socket(int sockfd);
 
 /* Used to close the pipes from parent to child except one process's pipe */
 void close_ptc_pipes_except(int p);

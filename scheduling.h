@@ -23,6 +23,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdint.h>
+
+#define TRUE 1
+#define FALSE 0
 
 #define FILE_MAXLENGTH 1030
 #define ERROR_MAXLENGTH (FILE_MAXLENGTH + 100)
@@ -37,10 +41,14 @@
 #define CLIENT_EXIT_MSG 0
 #define CLIENT_WORK_MSG 1
 
-#define CHILD_PROCESS_READY 0
-#define CHILD_PROCESS_SUCCESS 1
-#define CHILD_PROCESS_FAILURE 2
+#define CHILD_PROCESS_INIT 0
+#define CHILD_PROCESS_READY 1
+#define CHILD_PROCESS_SUCCESS 2
 #define CHILD_PROCESS_WARNING 3
+#define CHILD_PROCESS_FAILURE 4
+
+#define FCFS_CONT 0
+#define FCFS_EXIT 1
 
 extern char *enc_txt;                   /* Used to store encrypted file name */
 extern char *dec_txt;                   /* Used to store decrypted file name */
@@ -64,6 +72,6 @@ extern int sockfd;
 extern void get_time(void);
 
 /* First come first serve scheduling algorithm */
-void fcfs(void);
+int fcfs(void);
 
 #endif

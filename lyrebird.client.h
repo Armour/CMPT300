@@ -29,9 +29,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 
-#define TRUE 1
-#define FALSE 0
-
+#define CLEAN_TO_TXT 0
 #define CLEAN_TO_TIME 1
 #define CLEAN_TO_IFADDR 2
 #define CLEAN_TO_SOCKET 3
