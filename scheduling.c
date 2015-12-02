@@ -49,13 +49,13 @@ int fcfs(void) {
         return FCFS_EXIT;
     }
     if (FD_ISSET(sockfd, &rfds)) {
-        read(sockfd, &mark, sizeof(char));                /* Read message from server side */
+        recv(sockfd, &mark, sizeof(char), 0);                /* Read message from server side */
         printf("Get server info! : %c\n", mark);
         if (mark == CLIENT_EXIT_MSG) {
             return FCFS_EXIT;
         }
-        read(sockfd, enc_txt, sizeof(char) * FILE_MAXLENGTH);
-        read(sockfd, dec_txt, sizeof(char) * FILE_MAXLENGTH);
+        recv(sockfd, enc_txt, sizeof(char) * FILE_MAXLENGTH, 0);
+        recv(sockfd, dec_txt, sizeof(char) * FILE_MAXLENGTH, 0);
         for (i = 0; i < process_number_limit; ++i) {            /* If select is OK */
             if (is_free[i] == TRUE) {
                 get_time();
@@ -76,7 +76,7 @@ int fcfs(void) {
                 switch (message) {
                     case CHILD_PROCESS_INIT:
                         mark = DISPATCH_MSG;
-                        write(sockfd, &mark, sizeof(char));
+                        send(sockfd, &mark, sizeof(char), 0);
                         fprintf(fuck, "Init: %c\n", mark);
                         break;
                     case CHILD_PROCESS_SUCCESS:
@@ -85,12 +85,12 @@ int fcfs(void) {
                         read(child_to_parent[i * 2], buffer, sizeof(char) * FILE_MAXLENGTH);
                         printf("[%s] Child process ID #%d success! decrypt %s.\n", out_time, *(pid_array + i), buffer);
                         mark = SUCCESS_MSG;
-                        write(sockfd, &mark, sizeof(char));
+                        send(sockfd, &mark, sizeof(char), 0);
                         fprintf(fuck, "Success %c\n", mark);
-                        write(sockfd, buffer, sizeof(char) * FILE_MAXLENGTH);
+                        send(sockfd, buffer, sizeof(char) * FILE_MAXLENGTH, 0);
                         fprintf(fuck, "Success file %s\n", buffer);
                         sprintf(pid_buffer, "%d", pid_array[i]);
-                        write(sockfd, &pid_buffer, sizeof(char) * PID_MAXLENGTH);
+                        send(sockfd, &pid_buffer, sizeof(char) * PID_MAXLENGTH, 0);
                         fprintf(fuck, "Success pid %s\n", pid_buffer);
                         break;
                     case CHILD_PROCESS_WARNING:
@@ -100,9 +100,9 @@ int fcfs(void) {
                         read(child_to_parent[i * 2], buffer, sizeof(char) * ERROR_MAXLENGTH);
                         printf("[%s] Child process ID #%d have warning/error: %s!\n", out_time, *(pid_array + i), buffer);
                         mark = FAILURE_MSG;
-                        write(sockfd, &mark, sizeof(char));
+                        send(sockfd, &mark, sizeof(char), 0);
                         fprintf(fuck, "Error/warning %c\n", mark);
-                        write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
+                        send(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH, 0);
                         fprintf(fuck, "Error/warning msg %s\n", buffer);
                         break;
                    default:                                /* If message is not right */

@@ -241,7 +241,7 @@ int select_func(void) {
 
 char read_client_msg(int sockfd) {
     char msg;
-    read(sockfd, &msg, sizeof(char));
+    recv(sockfd, &msg, sizeof(char), 0);
     return msg;
 }
 
@@ -293,9 +293,9 @@ void store_client_ip(void) {
 void handle_success(int sock_num) {
     char read_pid[PID_MAXLENGTH];                   /* This is the pid number that read from one socket to client side */
     char read_buffer[ERROR_MAXLENGTH];              /* This is the buffer that we used to read message from socket */
-    read(sock_num, read_buffer, sizeof(char) * FILE_MAXLENGTH);
+    recv(sock_num, read_buffer, sizeof(char) * FILE_MAXLENGTH, 0);
     fprintf(fuck, "%s\n", read_buffer);
-    read(sock_num, read_pid, sizeof(char) * PID_MAXLENGTH);
+    recv(sock_num, read_pid, sizeof(char) * PID_MAXLENGTH, 0);
     fprintf(fuck, "%s\n", read_pid);
     get_time();
     fprintf(flog, "[%s] The lyrebird client %s has successfully decrypted %s in process %s.\n", out_time, client_ip, read_buffer, read_pid);
@@ -305,9 +305,9 @@ void handle_success(int sock_num) {
 
 void handle_dispatch(int sock_num) {
     char mark = CLIENT_WORK_MSG;
-    write(sock_num, &mark, sizeof(char));
-    write(sock_num, enc_txt, sizeof(char) * FILE_MAXLENGTH);
-    write(sock_num, dec_txt, sizeof(char) * FILE_MAXLENGTH);
+    send(sock_num, &mark, sizeof(char), 0);
+    send(sock_num, enc_txt, sizeof(char) * FILE_MAXLENGTH, 0);
+    send(sock_num, dec_txt, sizeof(char) * FILE_MAXLENGTH, 0);
     get_time();
     fprintf(flog, "[%s] The lyrebird client %s has been given the task of decrypting %s.\n", out_time, client_ip, enc_txt);
     max_task++;
@@ -316,7 +316,7 @@ void handle_dispatch(int sock_num) {
 
 void handle_failure(int sock_num) {
     char read_buffer[ERROR_MAXLENGTH];          /* This is the buffer that we used to read message from socket */
-    read(sock_num, read_buffer, sizeof(char) * ERROR_MAXLENGTH);
+    recv(sock_num, read_buffer, sizeof(char) * ERROR_MAXLENGTH, 0);
     fprintf(fuck, "%s\n", read_buffer);
     get_time();
     fprintf(flog, "[%s] The lyrebird client %s has encountered an error: %s", out_time, client_ip, read_buffer);
@@ -350,7 +350,7 @@ int ask_clients_quit(void) {
     for (i = 0; i < CLIENT_MAXNUM; ++i) {
         if (sockfd_cli[i] > 0) {
             char mark = CLIENT_EXIT_MSG;
-            write(sockfd_cli[i], &mark, sizeof(char));
+            send(sockfd_cli[i], &mark, sizeof(char), 0);
             remained_cli++;
         }
     }

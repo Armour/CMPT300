@@ -187,7 +187,7 @@ void print_connect_info(char *argv[]) {
 
 void send_connect_msg(void) {
     char mark = CONNECT_MSG;
-    write(sockfd, &mark, sizeof(char));
+    send(sockfd, &mark, sizeof(char), 0);
 }
 
 void wait_all_child(void) {
@@ -312,7 +312,7 @@ int main(int argc, char *argv[]) {
     }
 
     mark = DISCONNECT_SUCC_MSG;
-    write(sockfd, &mark, sizeof(char));
+    send(sockfd, &mark, sizeof(char), 0);
 
     close_all_ptc_pipes();                                  /* Close all parent to child pipes */
     read_rmng_msg();                                        /* Read remaining messages in all child processes */
@@ -320,13 +320,13 @@ int main(int argc, char *argv[]) {
 
     if (main_flag == EXIT_SUCCESS) {
         mark = DISCONNECT_SUCC_MSG;
-        write(sockfd, &mark, sizeof(char));
+        send(sockfd, &mark, sizeof(char), 0);
         fprintf(fuck, "QUIT: %c\n", mark);
         get_time();
         printf("[%s] lyrebird client: PID %d completed its tasks and is exiting successfully.\n", out_time, getpid());
     } else {
         mark = DISCONNECT_FAIL_MSG;
-        write(sockfd, &mark, sizeof(char));
+        send(sockfd, &mark, sizeof(char), 0);
         fprintf(fuck, "QUIT: %c\n", mark);
     }
 
