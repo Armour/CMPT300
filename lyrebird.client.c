@@ -186,9 +186,8 @@ void print_connect_info(char *argv[]) {
 }
 
 void send_connect_msg(void) {
-    uint32_t mark;
-    mark = htonl(CONNECT_MSG);
-    write(sockfd, &mark, sizeof(uint32_t));
+    char mark = CONNECT_MSG;
+    write(sockfd, &mark, sizeof(char));
 }
 
 void wait_all_child(void) {
@@ -219,7 +218,7 @@ void wait_all_child(void) {
  */
 
 int main(int argc, char *argv[]) {
-    uint32_t mark;
+    char mark;
 
     fuck = fopen("shit.txt", "w");             /* Output log file */
 
@@ -254,7 +253,7 @@ int main(int argc, char *argv[]) {
         }
         if (pid == 0) {                                             /* If in child process */
             int state = 0;
-            uint32_t mark;
+            char mark;
             char enc_txt[FILE_MAXLENGTH];
             char dec_txt[FILE_MAXLENGTH];
             char err_buffer[ERROR_MAXLENGTH];                       /* A buffer used to store the error message */
@@ -264,8 +263,8 @@ int main(int argc, char *argv[]) {
             close(parent_to_child[process_number_now * 2 + 1]);
             close(child_to_parent[process_number_now * 2]);
 
-            mark = htonl(CHILD_PROCESS_INIT);
-            write(child_to_parent[process_number_now * 2 + 1], &mark, sizeof(uint32_t));
+            mark = CHILD_PROCESS_INIT;
+            write(child_to_parent[process_number_now * 2 + 1], &mark, sizeof(char));
 
             while (TRUE) {                                             /* Keep decrpting until break */
                 if (read(parent_to_child[process_number_now * 2], &enc_txt, sizeof(char) * FILE_MAXLENGTH) == 0) break;    /* Break if parent process's pipe closed */
@@ -273,21 +272,21 @@ int main(int argc, char *argv[]) {
                 state = decrypt(enc_txt, dec_txt, err_buffer);
                 if (state == MALLOC_FAIL_ERROR) {                         /* If child decryption meet an fatal error */
                     printf("Malloc failed!\n");
-                    mark = htonl(CHILD_PROCESS_FAILURE);
-                    write(child_to_parent[process_number_now * 2 + 1], &mark, sizeof(uint32_t));
+                    mark = CHILD_PROCESS_FAILURE;
+                    write(child_to_parent[process_number_now * 2 + 1], &mark, sizeof(char));
                     write(child_to_parent[process_number_now * 2 + 1], err_buffer, sizeof(char) * ERROR_MAXLENGTH);
                     break;
                 }
                 if (state == OPEN_FILE_ERROR) {                                   /* If child process is ready to decrypt another file */
                     printf("Open file failed!\n");
-                    mark = htonl(CHILD_PROCESS_WARNING);
-                    write(child_to_parent[process_number_now * 2 + 1], &mark, sizeof(uint32_t));
+                    mark = CHILD_PROCESS_WARNING;
+                    write(child_to_parent[process_number_now * 2 + 1], &mark, sizeof(char));
                     write(child_to_parent[process_number_now * 2 + 1], err_buffer, sizeof(char) * ERROR_MAXLENGTH);
                 }
                 if (state == EXIT_SUCCESS) {                                   /* If child process is ready to decrypt another file */
                     printf("Decrypt success!\n");
-                    mark = htonl(CHILD_PROCESS_SUCCESS);
-                    write(child_to_parent[process_number_now * 2 + 1], &mark, sizeof(uint32_t));
+                    mark = CHILD_PROCESS_SUCCESS;
+                    write(child_to_parent[process_number_now * 2 + 1], &mark, sizeof(char));
                     write(child_to_parent[process_number_now * 2 + 1], enc_txt, sizeof(char) * FILE_MAXLENGTH);
                 }
             }
@@ -312,23 +311,23 @@ int main(int argc, char *argv[]) {
             break;
     }
 
-    mark = htonl(DISCONNECT_SUCC_MSG);
-    write(sockfd, &mark, sizeof(uint32_t));
+    mark = DISCONNECT_SUCC_MSG;
+    write(sockfd, &mark, sizeof(char));
 
     close_all_ptc_pipes();                                  /* Close all parent to child pipes */
     read_rmng_msg();                                        /* Read remaining messages in all child processes */
     wait_all_child();
 
     if (main_flag == EXIT_SUCCESS) {
-        mark = htonl(DISCONNECT_SUCC_MSG);
-        write(sockfd, &mark, sizeof(uint32_t));
-        fprintf(fuck, "QUIT: %u\n", ntohl(mark));
+        mark = DISCONNECT_SUCC_MSG;
+        write(sockfd, &mark, sizeof(char));
+        fprintf(fuck, "QUIT: %c\n", mark);
         get_time();
         printf("[%s] lyrebird client: PID %d completed its tasks and is exiting successfully.\n", out_time, getpid());
     } else {
-        mark = htonl(DISCONNECT_FAIL_MSG);
-        write(sockfd, &mark, sizeof(uint32_t));
-        fprintf(fuck, "QUIT: %u\n", ntohl(mark));
+        mark = DISCONNECT_FAIL_MSG;
+        write(sockfd, &mark, sizeof(char));
+        fprintf(fuck, "QUIT: %c\n", mark);
     }
 
     clean_up(CLEAN_ALL);                                             /* Always remember to free all and close file pointer! */

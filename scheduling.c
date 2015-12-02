@@ -39,7 +39,7 @@
 
 int fcfs(void) {
     int i;
-    uint32_t mark;
+    char mark;
     char buffer[ERROR_MAXLENGTH];
     init_select_with_socket(sockfd);                          /* Every time we need to initialize file descriptor set */
     if (select(max_descriptor + 1, &rfds, NULL, NULL, NULL) == -1) {                      /* If select function failed */
@@ -49,9 +49,9 @@ int fcfs(void) {
         return FCFS_EXIT;
     }
     if (FD_ISSET(sockfd, &rfds)) {
-        read(sockfd, &mark, sizeof(uint32_t));                /* Read message from server side */
-        printf("Get server info! : %u\n", ntohl(mark));
-        if (ntohl(mark) == CLIENT_EXIT_MSG) {
+        read(sockfd, &mark, sizeof(char));                /* Read message from server side */
+        printf("Get server info! : %c\n", mark);
+        if (mark == CLIENT_EXIT_MSG) {
             return FCFS_EXIT;
         }
         read(sockfd, enc_txt, sizeof(char) * FILE_MAXLENGTH);
@@ -69,29 +69,29 @@ int fcfs(void) {
     } else {
         for (i = 0; i < process_number_limit; ++i) {            /* If select is OK */
             if (FD_ISSET(child_to_parent[i * 2], &rfds)) {
-                uint32_t message;                               /* The message that read from child process's pipe */
-                uint32_t mark;                                  /* The mark that used to write to server side */
-                read(child_to_parent[i * 2], &message, sizeof(uint32_t));
-                message = ntohl(message);
+                char message;                               /* The message that read from child process's pipe */
+                char mark;                                  /* The mark that used to write to server side */
+                char pid_buffer[PID_MAXLENGTH];
+                read(child_to_parent[i * 2], &message, sizeof(char));
                 switch (message) {
                     case CHILD_PROCESS_INIT:
-                        mark = htonl(DISPATCH_MSG);
-                        write(sockfd, &mark, sizeof(uint32_t));
-                        fprintf(fuck, "Init: %u\n", ntohl(mark));
+                        mark = DISPATCH_MSG;
+                        write(sockfd, &mark, sizeof(char));
+                        fprintf(fuck, "Init: %c\n", mark);
                         break;
                     case CHILD_PROCESS_SUCCESS:
                         is_free[i] = TRUE;
                         get_time();
                         read(child_to_parent[i * 2], buffer, sizeof(char) * FILE_MAXLENGTH);
                         printf("[%s] Child process ID #%d success! decrypt %s.\n", out_time, *(pid_array + i), buffer);
-                        mark = htonl(SUCCESS_MSG);
-                        write(sockfd, &mark, sizeof(uint32_t));
-                        fprintf(fuck, "Success %u\n", ntohl(mark));
+                        mark = SUCCESS_MSG;
+                        write(sockfd, &mark, sizeof(char));
+                        fprintf(fuck, "Success %c\n", mark);
                         write(sockfd, buffer, sizeof(char) * FILE_MAXLENGTH);
                         fprintf(fuck, "Success file %s\n", buffer);
-                        mark = htonl(pid_array[i]);
-                        write(sockfd, &mark, sizeof(uint32_t));
-                        fprintf(fuck, "Success pid %u\n", ntohl(mark));
+                        sprintf(pid_buffer, "%d", pid_array[i]);
+                        write(sockfd, &pid_buffer, sizeof(char) * PID_MAXLENGTH);
+                        fprintf(fuck, "Success pid %s\n", pid_buffer);
                         break;
                     case CHILD_PROCESS_WARNING:
                         is_free[i] = TRUE;
@@ -99,9 +99,9 @@ int fcfs(void) {
                         get_time();
                         read(child_to_parent[i * 2], buffer, sizeof(char) * ERROR_MAXLENGTH);
                         printf("[%s] Child process ID #%d have warning/error: %s!\n", out_time, *(pid_array + i), buffer);
-                        mark = htonl(FAILURE_MSG);
-                        write(sockfd, &mark, sizeof(uint32_t));
-                        fprintf(fuck, "Error/warning %u\n", ntohl(mark));
+                        mark = FAILURE_MSG;
+                        write(sockfd, &mark, sizeof(char));
+                        fprintf(fuck, "Error/warning %c\n", mark);
                         write(sockfd, buffer, sizeof(char) * ERROR_MAXLENGTH);
                         fprintf(fuck, "Error/warning msg %s\n", buffer);
                         break;

@@ -52,7 +52,7 @@ int finish_flag = 0;            /* This is a flag that indicate reaching the end
 char *client_ip;                /* A pointer to the IP address char array of one client */
 int max_task = 0;               /* This is the number of the decryption tasks that has been assigned */
 int cnt_task = 0;               /* This is the number of the decryption tasks that has already finished */
-uint32_t read_type;             /* This is the message that read from one socket to client side */
+char read_type;             /* This is the message that read from one socket to client side */
 
 /*
  * Function: Get_time
@@ -239,10 +239,10 @@ int select_func(void) {
     return 0;
 }
 
-uint32_t read_client_msg(int sockfd) {
-    uint32_t msg;
-    read(sockfd, &msg, sizeof(uint32_t));
-    return ntohl(msg);
+char read_client_msg(int sockfd) {
+    char msg;
+    read(sockfd, &msg, sizeof(char));
+    return msg;
 }
 
 int accept_new_cli(void) {
@@ -291,23 +291,21 @@ void store_client_ip(void) {
 }
 
 void handle_success(int sock_num) {
-    uint32_t read_pid;                   /* This is the pid number that read from one socket to client side */
-    char read_buffer[ERROR_MAXLENGTH];          /* This is the buffer that we used to read message from socket */
+    char read_pid[PID_MAXLENGTH];                   /* This is the pid number that read from one socket to client side */
+    char read_buffer[ERROR_MAXLENGTH];              /* This is the buffer that we used to read message from socket */
     read(sock_num, read_buffer, sizeof(char) * FILE_MAXLENGTH);
     fprintf(fuck, "%s\n", read_buffer);
-    read(sock_num, &read_pid, sizeof(uint32_t));
-    fprintf(fuck, "%u\n", ntohl(read_pid));
-    read_pid = ntohl(read_pid);
+    read(sock_num, read_pid, sizeof(char) * PID_MAXLENGTH);
+    fprintf(fuck, "%s\n", read_pid);
     get_time();
-    fprintf(flog, "[%s] The lyrebird client %s has successfully decrypted %s in process %u.\n", out_time, client_ip, read_buffer, read_pid);
+    fprintf(flog, "[%s] The lyrebird client %s has successfully decrypted %s in process %s.\n", out_time, client_ip, read_buffer, read_pid);
     cnt_task++;
     printf("%u cnt: %d max: %d\n", read_type, cnt_task, max_task);
 }
 
 void handle_dispatch(int sock_num) {
-    uint32_t mark = CLIENT_WORK_MSG;
-    mark = htonl(mark);
-    write(sock_num, &mark, sizeof(uint32_t));
+    char mark = CLIENT_WORK_MSG;
+    write(sock_num, &mark, sizeof(char));
     write(sock_num, enc_txt, sizeof(char) * FILE_MAXLENGTH);
     write(sock_num, dec_txt, sizeof(char) * FILE_MAXLENGTH);
     get_time();
@@ -326,7 +324,7 @@ void handle_failure(int sock_num) {
     printf("%u cnt: %d max: %d\n", read_type, cnt_task, max_task);
 }
 
-void handle_client_msg(int sock_num, uint32_t read_type){
+void handle_client_msg(int sock_num, char read_type){
     switch (read_type) {
         case SUCCESS_MSG:
             handle_success(sock_num);
@@ -351,9 +349,8 @@ int ask_clients_quit(void) {
     int remained_cli = 0;
     for (i = 0; i < CLIENT_MAXNUM; ++i) {
         if (sockfd_cli[i] > 0) {
-            uint32_t mark = CLIENT_EXIT_MSG;
-            mark = htonl(mark);
-            write(sockfd_cli[i], &mark, sizeof(uint32_t));
+            char mark = CLIENT_EXIT_MSG;
+            write(sockfd_cli[i], &mark, sizeof(char));
             remained_cli++;
         }
     }
@@ -362,7 +359,7 @@ int ask_clients_quit(void) {
 
 void wait_clients_quit(int remained_cli) {
     int i, j;
-    uint32_t read_type;
+    char read_type;
     while (remained_cli) {
         init_select();
         if (select_func() == -1) break;
@@ -371,7 +368,7 @@ void wait_clients_quit(int remained_cli) {
                 client_ip = get_host_by_sockfd(i);
                 printf("Wait for %s socket %d\n", client_ip, i);
                 read_type = read_client_msg(i);
-                printf("RMSG %u\n", read_type);
+                printf("RMSG %c\n", read_type);
                 if (read_type == DISCONNECT_SUCC_MSG || read_type == DISCONNECT_FAIL_MSG) {
                     get_time();
                     if (read_type == DISCONNECT_SUCC_MSG)
@@ -495,7 +492,7 @@ int main(int argc, char *argv[]) {
                     store_client_ip();
                     break;
                 } else {
-                    uint32_t msg = read_client_msg(i);
+                    char msg = read_client_msg(i);
                     printf("Client msg : %u!!\n", msg);
                     client_ip = get_host_by_sockfd(i);
                     handle_client_msg(i, msg);
