@@ -42,9 +42,9 @@ int *child_to_parent;                   /* Pipe that used to transmit message fr
 fd_set rfds;                            /* The set of file descriptor */
 int max_descriptor;                     /* The max number of file descriptor */
 
-int port_number;                            /* The server port number */
-char host[NI_MAXHOST];                      /* Used to store the return value of getnameinfo function */
-struct ifaddrs *ifaddr, *ifa;               /* Used to store the return value of getifaddrs function */
+int port_number;                                /* The server port number */
+char host[NI_MAXHOST];                          /* Used to store the return value of getnameinfo function */
+struct ifaddrs *ifaddr, *ifa;                   /* Used to store the return value of getifaddrs function */
 
 int sockfd;                                     /* Socket file descriptor */
 socklen_t addr_len;                             /* The size of sockaddr_in */
@@ -55,8 +55,6 @@ char send_mark[MARK_MAXLENGTH];                 /* A buffer that used to store s
 char recv_mark[MARK_MAXLENGTH];                 /* A buffer that used to store received message */
 char read_mark[MARK_MAXLENGTH];                 /* A buffer that used to store read message */
 char write_mark[MARK_MAXLENGTH];                /* A buffer that used to store write message */
-
-FILE *fuck;
 
 /*
  * Function: Main
@@ -72,24 +70,16 @@ FILE *fuck;
  */
 
 int main(int argc, char *argv[]) {
-    fuck = fopen("shit.txt", "w");             /* Output log file */
 
-    //signal(SIGINT, signal_handler);
-    //signal(SIGQUIT, signal_handler);
-    //signal(SIGHUP, signal_handler);
+    init();                                 /* Init some variables (like malloc timestamp string, encrypt text string, etc.) */
 
-    addr_len = sizeof(struct sockaddr_in);
-    out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
-    enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
-    dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
+    check_par(argc, argv);                  /* Check command arguments number */
+    get_port_number(argv);                  /* Get the port number */
 
-    check_par(argc, argv);
-    get_port_number(argv);
+    create_socket();                        /* Create a socket */
+    init_pipe();                            /* Initalize pipe file descriptors */
 
-    create_socket();
-    init_pipe();                                            /* Initialize pipe */
-
-    while (process_number_now + 1 < process_number_limit) {
+    while (process_number_now + 1 < process_number_limit) {             /* Until fork all the child processes */
         process_number_now++;
         pid = fork();                                       /* Fork! */
         if (pid < 0) {                                      /* If fork failed */
@@ -98,54 +88,49 @@ int main(int argc, char *argv[]) {
             main_flag = EXIT_FAILURE;                       /* Exit non-zero value */
             break;                                          /* Break and still need to wait for all child processes */
         }
-        if (pid != 0 ) {                                            /* If fork successful and is in parent process */
-            pid_array[process_number_now] = (int)pid;               /* Store child pid into array */
-            close(parent_to_child[process_number_now * 2]);
-            close(child_to_parent[process_number_now * 2 + 1]);     /* Close pipes that will not be used */
-            is_free[process_number_now] = TRUE;
+        if (pid != 0 ) {                                                /* If fork successful and is in parent process */
+            pid_array[process_number_now] = (int)pid;                   /* Store child pid into array */
+            close(parent_to_child[process_number_now * 2]);             /* Close pipes that will not be used */
+            close(child_to_parent[process_number_now * 2 + 1]);
+            is_free[process_number_now] = TRUE;                         /* Set the process state to be FREE */
         }
-        if (pid == 0) {                                             /* If in child process */
+        if (pid == 0) {                                                 /* If in child process */
             int state = 0;
             char enc_txt[FILE_MAXLENGTH];
             char dec_txt[FILE_MAXLENGTH];
-            char err_buffer[ERROR_MAXLENGTH];                       /* A buffer used to store the error message */
+            char err_buffer[ERROR_MAXLENGTH];                           /* A buffer used to store the error message */
 
-            close_ptc_pipes_except(process_number_now);             /* Close other pipes except used ptc and ctp */
+            close_ptc_pipes_except(process_number_now);                 /* Close other pipes except used ptc and ctp */
             close_ctp_pipes_except(process_number_now);
             close(parent_to_child[process_number_now * 2 + 1]);
             close(child_to_parent[process_number_now * 2]);
 
-            strcpy(write_mark, CHILD_PROCESS_INIT);
+            strcpy(write_mark, CHILD_PROCESS_INIT);                     /* Ask child process state to be INIT */
             write_pipe_msg(child_to_parent[process_number_now * 2 + 1], write_mark);
 
-            while (TRUE) {                                                  /* Keep decrpting until break */
-                if (read_pipe_msg(parent_to_child[process_number_now * 2], enc_txt) == 0) break;     /* Break if parent process's pipe closed */
+            while (TRUE) {                                                      /* Keep decrpting until break */
+                if (read_pipe_msg(parent_to_child[process_number_now * 2], enc_txt) == 0) break;        /* Break if parent process's pipe closed */
                 read_pipe_msg(parent_to_child[process_number_now * 2], dec_txt);
-                printf("Child process decrypt %s and %s now!\n", enc_txt, dec_txt);
                 state = decrypt(enc_txt, dec_txt, err_buffer);
-                if (state == MALLOC_FAIL_ERROR) {                           /* If child decryption meet an fatal error */
-                    printf("Malloc failed!\n");
+                if (state == MALLOC_FAIL_ERROR) {                               /* If child decryption meet an fatal error */
                     strcpy(write_mark, CHILD_PROCESS_FAILURE);
                     write_pipe_msg(child_to_parent[process_number_now * 2 + 1], write_mark);
                     write_pipe_msg(child_to_parent[process_number_now * 2 + 1], err_buffer);
                     break;
                 }
-                if (state == OPEN_FILE_ERROR) {                                   /* If child process is ready to decrypt another file */
-                    printf("Open file failed!\n");
+                if (state == OPEN_FILE_ERROR) {                                 /* If child process open file failed, it will still wait for new task */
                     strcpy(write_mark, CHILD_PROCESS_WARNING);
                     write_pipe_msg(child_to_parent[process_number_now * 2 + 1], write_mark);
                     write_pipe_msg(child_to_parent[process_number_now * 2 + 1], err_buffer);
                 }
-                if (state == EXIT_SUCCESS) {                                   /* If child process is ready to decrypt another file */
-                    printf("Decrypt success!\n");
+                if (state == EXIT_SUCCESS) {                                    /* If child process is ready to decrypt another file */
                     strcpy(write_mark, CHILD_PROCESS_SUCCESS);
                     write_pipe_msg(child_to_parent[process_number_now * 2 + 1], write_mark);
                     write_pipe_msg(child_to_parent[process_number_now * 2 + 1], enc_txt);
                 }
             }
 
-            printf("Parent close!\n");
-            close(parent_to_child[process_number_now * 2]);             /* Close used pipes */
+            close(parent_to_child[process_number_now * 2]);                     /* Close used pipes */
             close(child_to_parent[process_number_now * 2 + 1]);
             clean_up(CLEAN_ALL);                                                /* Always remember to free all and close file pointer! */
             exit(state == MALLOC_FAIL_ERROR? EXIT_FAILURE: EXIT_SUCCESS);
@@ -153,32 +138,21 @@ int main(int argc, char *argv[]) {
     }
 
     process_number_now = process_number_limit;
+    connect_socket(argv);                                   /* Conncet to server socket */
+    print_connect_info(argv);                               /* Print connect information */
+    send_connect_msg();                                     /* Send conncet message to server */
 
-    connect_socket(argv);
-    print_connect_info(argv);
-    send_connect_msg();
-
-    while (TRUE) {
+    while (TRUE) {                                          /* FCFS until server ask to quit */
         if (fcfs() == FCFS_EXIT)
             break;
     }
 
     close_all_ptc_pipes();                                  /* Close all parent to child pipes */
     read_rmng_msg();                                        /* Read remaining messages in all child processes */
-    wait_all_child();
+    wait_all_child();                                       /* Wait for all child exit */
 
-    if (main_flag == EXIT_SUCCESS) {
-        printf("Send exit success mark!\n");
-        strcpy(send_mark, DISCONNECT_SUCC_MSG);
-        send_socket_msg(sockfd, send_mark);
-        get_time();
-        printf("[%s] lyrebird client: PID %d completed its tasks and is exiting successfully.\n", out_time, getpid());
-    } else {
-        printf("Send exit failed mark!\n");
-        strcpy(send_mark, DISCONNECT_FAIL_MSG);
-        send_socket_msg(sockfd, send_mark);
-    }
+    check_client_exit_state();                              /* Check client exit state and send it to server before exit */
 
-    clean_up(CLEAN_ALL);                                             /* Always remember to free all and close file pointer! */
+    clean_up(CLEAN_ALL);                                    /* Always remember to free all and close file pointer! */
     return main_flag;
 }

@@ -57,8 +57,8 @@ void get_time(void) {
 
 void send_socket_msg(int socket, char *msg) {
     msg_len = htonl(strlen(msg));
-    send(socket, &msg_len, sizeof(uint32_t), 0);
-    send(socket, msg, ntohl(msg_len), 0);
+    send(socket, &msg_len, sizeof(uint32_t), 0);                /* Send the message length first */
+    send(socket, msg, ntohl(msg_len), 0);                       /* Send the message content */
     //printf("Send msg len: !%u!\n", ntohl(msg_len));
     printf("Send msg content: !%s!\n", msg);
 }
@@ -77,8 +77,8 @@ void send_socket_msg(int socket, char *msg) {
  */
 
 void recv_socket_msg(int socket, char *msg) {
-    recv(socket, &msg_len, sizeof(uint32_t), 0);
-    recv(socket, msg, ntohl(msg_len), 0);
+    recv(socket, &msg_len, sizeof(uint32_t), 0);                /* Recv the message length first */
+    recv(socket, msg, ntohl(msg_len), 0);                       /* Recv the message content */
     msg[ntohl(msg_len)] = '\0';
     //printf("Recv msg len: !%u!\n", ntohl(msg_len));
     printf("Recv msg content: !%s!\n", msg);
@@ -99,8 +99,8 @@ void recv_socket_msg(int socket, char *msg) {
 
 void write_pipe_msg(int pipe, char *msg) {
     msg_len = htonl(strlen(msg));
-    write(pipe, &msg_len, sizeof(uint32_t));
-    write(pipe, msg, ntohl(msg_len));
+    write(pipe, &msg_len, sizeof(uint32_t));                    /* Write the message length first */
+    write(pipe, msg, ntohl(msg_len));                           /* Write the message content */
     //printf("Write msg len: !%u!\n", ntohl(msg_len));
     printf("Write msg content: !%s!\n", msg);
 }
@@ -120,12 +120,35 @@ void write_pipe_msg(int pipe, char *msg) {
 
 int read_pipe_msg(int pipe, char *msg) {
     int ret;
-    if ((ret = read(pipe, &msg_len, sizeof(uint32_t))) == 0) return 0;
-    if ((ret = read(pipe, msg, ntohl(msg_len))) == 0) return 0;
+    if ((ret = read(pipe, &msg_len, sizeof(uint32_t))) == 0) return 0;          /* Read the message length first */
+    if ((ret = read(pipe, msg, ntohl(msg_len))) == 0) return 0;                 /* Read the message content */
     msg[ntohl(msg_len)] = '\0';
     //printf("Read msg len: !%u!\n", ntohl(msg_len));
     printf("Read msg content: !%s!\n", msg);
     return ret;
+}
+
+/*
+ * Function: Init
+ * -------------------
+ *   This function is used to init some variables,
+ *   like malloc timestamp string, encrypt text string, etc.
+ *
+ *   Parameters:
+ *      no parameters
+ *
+ *   Returns:
+ *      void
+ */
+
+void init(void) {
+    //signal(SIGINT, signal_handler);
+    //signal(SIGQUIT, signal_handler);
+    //signal(SIGHUP, signal_handler);
+    addr_len = sizeof(struct sockaddr_in);
+    out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
+    enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
+    dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
 }
 
 /*
@@ -263,86 +286,8 @@ void print_connect_info(char *argv[]) {
  */
 
 void send_connect_msg(void) {
-    printf("Send connect msg!\n");
-    strcpy(send_mark, CONNECT_MSG);
+    strcpy(send_mark, CONNECT_MSG);                                 /* Send connect message to server */
     send_socket_msg(sockfd, send_mark);
-}
-
-/*
- * Function: Wait_all_child
- * -------------------
- *   This function is used to wait all child processes quit
- *
- *   Parameters:
- *      no parameters
- *
- *   Returns:
- *      void
- */
-
-void wait_all_child(void) {
-    int i;
-    for (i = 0; i < process_number_limit; i++) {            /* Parent process wait for all child processes before exit */
-        int state;
-        pid_t pid = wait(&state);                           /* Wait until found one child process finished */
-        printf("Wait child state: %d\n", state);
-        if (state != EXIT_SUCCESS) {                                   /* If child process terminate unexpectly! */
-            get_time();
-            printf("[%s] Child process ID #%d did not terminate successfully.\n", out_time, (int)pid);
-        }
-        close_ctp_pipe_with_pid(pid);                       /* Close the pipe that uses to read messages from exited child process */
-    }
-}
-
-/*
- * Function: Clean_up
- * -------------------
- *   This function is used to free memory and close file pointer before program exit
- *
- *   Parameters:
- *      no parameters
- *
- *   Returns:
- *      void
- */
-
-void clean_up(int step) {
-    if (step >= CLEAN_TO_TXT){
-        free(enc_txt);
-        free(dec_txt);
-        free(parent_to_child);
-        free(child_to_parent);
-        free(pid_array);
-        free(is_free);
-    }
-    if (step >= CLEAN_TO_TIME) free(out_time);
-    if (step >= CLEAN_TO_SOCKET) close(sockfd);
-}
-
-/*
- * Function: Signal_handler
- * -------------------
- *   This function is used to handle signal
- *
- *   Parameters:
- *      sig_num: the number of the signal
- *
- *   Returns:
- *      void
- */
-
-void signal_handler(int sig_num) {
-    switch (sig_num) {
-        case SIGINT:
-            printf("Can not interrupt (signal #%d) this process, because this is a VERY IMPORTANT task!\n", sig_num);
-            break;
-        case SIGQUIT:
-            printf("Can not quit (signal #%d) this process, because this is a VERY IMPORTANT task!\n", sig_num);
-            break;
-        case SIGHUP:
-            printf("Can not exit (signal #%d) this process, because this is a VERY IMPORTANT task!\n", sig_num);
-            break;
-    }
 }
 
 /*
@@ -574,5 +519,111 @@ void read_rmng_msg(void) {
     int i;
     for (i = 0; i < process_number_limit; i++) {          /* Read all remaining message in child processes */
         while (read_pipe_msg(child_to_parent[i * 2], read_mark));
+    }
+}
+
+/*
+ * Function: Wait_all_child
+ * -------------------
+ *   This function is used to wait all child processes quit
+ *
+ *   Parameters:
+ *      no parameters
+ *
+ *   Returns:
+ *      void
+ */
+
+void wait_all_child(void) {
+    int i;
+    for (i = 0; i < process_number_limit; i++) {            /* Parent process wait for all child processes before exit */
+        int state;
+        pid_t pid = wait(&state);                           /* Wait until found one child process finished */
+        printf("Wait child state: %d\n", state);
+        if (state != EXIT_SUCCESS) {                                   /* If child process terminate unexpectly! */
+            get_time();
+            printf("[%s] Child process ID #%d did not terminate successfully.\n", out_time, (int)pid);
+        }
+        close_ctp_pipe_with_pid(pid);                       /* Close the pipe that uses to read messages from exited child process */
+    }
+}
+
+/*
+ * Function: Check_client_exit_state
+ * -------------------
+ *   This function is used to check client's exit state
+ *   and send it to server before exit
+ *
+ *   Parameters:
+ *      no parameters
+ *
+ *   Returns:
+ *      void
+ */
+
+void check_client_exit_state(void) {
+    if (main_flag == EXIT_SUCCESS) {                        /* If client exit with state EXIT_SUCCESS */
+        printf("Send exit success mark!\n");
+        strcpy(send_mark, DISCONNECT_SUCC_MSG);
+        send_socket_msg(sockfd, send_mark);
+        get_time();
+        printf("[%s] lyrebird client: PID %d completed its tasks and is exiting successfully.\n", out_time, getpid());
+    } else {                                                /* If client exit with other state */
+        printf("Send exit failed mark!\n");
+        strcpy(send_mark, DISCONNECT_FAIL_MSG);
+        send_socket_msg(sockfd, send_mark);
+        get_time();
+        printf("[%s] lyrebird client: PID %d completed its tasks but exiting unexpectly!\n", out_time, getpid());
+    }
+}
+
+/*
+ * Function: Clean_up
+ * -------------------
+ *   This function is used to free memory and close file pointer before program exit
+ *
+ *   Parameters:
+ *      no parameters
+ *
+ *   Returns:
+ *      void
+ */
+
+void clean_up(int step) {
+    if (step >= CLEAN_TO_TIME){
+        free(enc_txt);
+        free(dec_txt);
+        free(parent_to_child);
+        free(child_to_parent);
+        free(pid_array);
+        free(is_free);
+    }
+    if (step >= CLEAN_TO_TIME) free(out_time);
+    if (step >= CLEAN_TO_SOCKET) close(sockfd);
+}
+
+/*
+ * Function: Signal_handler
+ * -------------------
+ *   This function is used to handle signal
+ *
+ *   Parameters:
+ *      sig_num: the number of the signal
+ *
+ *   Returns:
+ *      void
+ */
+
+void signal_handler(int sig_num) {
+    switch (sig_num) {
+        case SIGINT:
+            printf("Can not interrupt (signal #%d) this process, because this is a VERY IMPORTANT task!\n", sig_num);
+            break;
+        case SIGQUIT:
+            printf("Can not quit (signal #%d) this process, because this is a VERY IMPORTANT task!\n", sig_num);
+            break;
+        case SIGHUP:
+            printf("Can not exit (signal #%d) this process, because this is a VERY IMPORTANT task!\n", sig_num);
+            break;
     }
 }

@@ -24,7 +24,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/socket.h>
-#include "common_macro.h"
+#include "lyre_macro.h"
 #include "cli_func.h"
 
 /* First come first serve scheduling algorithm */

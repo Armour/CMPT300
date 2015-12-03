@@ -28,8 +28,7 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
-#include "svr_macro.h"
-#include "common_macro.h"
+#include "lyre_macro.h"
 
 extern int main_flag;                           /* Used to store return value for main function */
 extern char *enc_txt;                           /* Used to store encrypted file name */
@@ -37,7 +36,6 @@ extern char *dec_txt;                           /* Used to store decrypted file 
 extern char *out_time;                          /* Used to store output time */
 
 extern FILE *fcfg, *flog;                       /* The file pointer that used to open config file and log file */
-extern FILE *fuck;
 
 extern fd_set rfds;                             /* The set of file descriptor */
 extern int max_fds;                             /* The max number of file descriptor */
@@ -66,11 +64,20 @@ extern char read_mark[MARK_MAXLENGTH];                 /* A buffer that used to 
 extern char write_mark[MARK_MAXLENGTH];                /* A buffer that used to store write message */
 
 
+/* Used to get current time in specify format */
+void get_time(void);
+
 /* Used to send a message through socket with its length send first */
 void send_socket_msg(int socket, char *msg);
 
 /* Used to receive a message through socket with its length at first */
 void recv_socket_msg(int socket, char *msg);
+
+/* Init some varibles (like malloc timestamp string, encrypt text string, etc.) */
+void init(void);
+
+/* Used to init socket array for client side */
+void init_cli_sock(void);
 
 /* Used to check the parameters in command */
 void check_par(int argc, char *argv[]);
@@ -80,9 +87,6 @@ void open_config(char *argv[]);
 
 /* Used to open log file and check if it failed */
 void open_log(char *argv[]);
-
-/* Used to get current time in specify format */
-void get_time(void);
 
 /* Used to get host ip address through socket file descriptor */
 char *get_host_by_sockfd(int sockfd);
@@ -101,9 +105,6 @@ void listen_socket(void);
 
 /* Used to find out and print the info of server side */
 void print_server_info(void);
-
-/* Used to init socket array for client side */
-void init_cli_sock(void);
 
 /* Used to init FD before each time's select */
 void init_select(void);

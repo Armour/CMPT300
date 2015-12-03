@@ -28,7 +28,6 @@ char *enc_txt;                          /* Used to store encrypted file name */
 char *dec_txt;                          /* Used to store decrypted file name */
 char *out_time;                         /* Used to store output time */
 FILE *fcfg, *flog;                      /* The file pointer that used to open config file and log file */
-FILE *fuck;
 
 int max_fds;                            /* The max number of file descriptor */
 fd_set rfds;                            /* The set of file descriptor */
@@ -72,25 +71,21 @@ char write_mark[MARK_MAXLENGTH];                /* A buffer that used to store w
 int main(int argc, char *argv[]) {
     int i;
 
-    out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
-    enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
-    dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
+    init();                                 /* Init some variables (like malloc timestamp string, encrypt text string, etc.) */
 
-    check_par(argc, argv);
-    open_config(argv);
-    open_log(argv);
+    check_par(argc, argv);                  /* Check command arguments number */
+    open_config(argv);                      /* Open config file and check if it failed */
+    open_log(argv);                         /* Open log file and check if it failed */
 
-    get_ipaddr();
+    get_ipaddr();                           /* Get server IP address */
 
-    create_socket();
-    bind_socket();
-    listen_socket();
+    create_socket();                        /* Create a socket */
+    bind_socket();                          /* Bind the socket */
+    listen_socket();                        /* Listen at the socket */
 
-    print_server_info();
+    print_server_info();                    /* Print server information */
 
-    init_cli_sock();
-
-    while (TRUE) {                /* Read until end of file */
+    while (TRUE) {                          /* Read until the end of file */
         if (read_flag) {
             if (fscanf(fcfg, "%s", enc_txt) == EOF) {
                 finish_flag = 1;
@@ -102,22 +97,22 @@ int main(int argc, char *argv[]) {
 
         if (finish_flag && cnt_task == max_task) break;
 
-        init_select();
+        init_select();                      /* Select function */
         if (select_func() == -1) break;
 
         for (i = 0; i < max_fds + 1; i++) {
             if (FD_ISSET(i, &rfds)) {
                 if (i == sockfd) {                              /* If have a new client connect */
                     printf("New client!!\n");
-                    if (accept_new_cli() == -1) break;
-                    if (check_connect() == -1) break;
-                    if (print_client_info() == -1) break;
-                    store_client_ip();
+                    if (accept_new_cli() == -1) break;          /* Try to accept new client */
+                    if (check_connect() == -1) break;           /* Check connect message from client */
+                    if (print_client_info() == -1) break;       /* Print the information of client side */
+                    store_client_ip();                          /* Store the client ip address */
                     break;
-                } else {
-                    client_ip = get_host_by_sockfd(i);
-                    recv_socket_msg(i, recv_mark);
-                    handle_client_msg(i);
+                } else {                                        /* If have new message from client side */
+                    client_ip = get_host_by_sockfd(i);          /* Get the client ip address by socket */
+                    recv_socket_msg(i, recv_mark);              /* Get the message from socket */
+                    handle_client_msg(i);                       /* Handle client message (SUCCESS_MSG, FAILURE_MSG, DISPATCH_MSG, etc.) */
                     break;
                 }
             }
@@ -126,10 +121,10 @@ int main(int argc, char *argv[]) {
         if (main_flag == EXIT_FAILURE) break;
     }
 
-    int remained_cli = ask_clients_quit();
+    int remained_cli = ask_clients_quit();                      /* Ask clients quit and count the remain clients number */
     printf("Total Remained Client: %d\n", remained_cli);
-    wait_clients_quit(remained_cli);
-    quit_server();
+    wait_clients_quit(remained_cli);                            /* Wait for all clients quit */
+    quit_server();                                              /* Clean up and quit server, also print the message to log */
 
     return main_flag;
 }

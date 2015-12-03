@@ -22,9 +22,9 @@
 #include "scheduling.h"
 #include "memwatch.h"
 
-char fcfs_file_buf[FILE_MAXLENGTH];
-char fcfs_err_buf[ERROR_MAXLENGTH];
-char fcfs_pid_buf[PID_MAXLENGTH];
+char fcfs_file_buf[FILE_MAXLENGTH];                 /* The buffer that used to store file name that read from pipe */
+char fcfs_err_buf[ERROR_MAXLENGTH];                 /* The buffer that used to store error message that read from pipe */
+char fcfs_pid_buf[PID_MAXLENGTH];                   /* The buffer that used to store pid number that read from pipe */
 
 /*
  * Function: Fcfs
@@ -41,67 +41,54 @@ char fcfs_pid_buf[PID_MAXLENGTH];
 
 int fcfs(void) {
     int i;
-    init_select_with_socket(sockfd);                          /* Every time we need to initialize file descriptor set */
+    init_select_with_socket(sockfd);                        /* Every time we need to initialize file descriptor set */
     if (select(max_descriptor + 1, &rfds, NULL, NULL, NULL) == -1) {                      /* If select function failed */
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Select function failed.\n", out_time, getpid());
         main_flag = 1;
         return FCFS_EXIT;
     }
-    if (FD_ISSET(sockfd, &rfds)) {
-        printf("Recv server msg!\n");
-        recv_socket_msg(sockfd, recv_mark);                  /* Read message from server side */
+    if (FD_ISSET(sockfd, &rfds)) {                          /* If get message from server */
+        //printf("Recv server msg!\n");
+        recv_socket_msg(sockfd, recv_mark);                 /* Read message from server side */
         if (strcmp(recv_mark, CLIENT_EXIT_MSG) == 0) {
             printf("Server ask to quit!\n");
             return FCFS_EXIT;
         }
-        recv_socket_msg(sockfd, enc_txt);
-        //printf("Recv enc_txt: !%s!\n", enc_txt);
+        recv_socket_msg(sockfd, enc_txt);                   /* If not ask exit, then need to do decryption, so we recv enc_txt and dec_txt */
         recv_socket_msg(sockfd, dec_txt);
-        //printf("Recv dec_txt: !%s!\n", dec_txt);
-
-        for (i = 0; i < process_number_limit; ++i) {            /* If select is OK */
+        for (i = 0; i < process_number_limit; ++i) {                /* If select is OK */
             if (is_free[i] == TRUE) {
-                get_time();
-                printf("[%s] Child process ID #%d will decrypt %s.\n", out_time, *(pid_array + i), enc_txt);
-                write_pipe_msg(parent_to_child[i * 2 + 1], enc_txt);
+                write_pipe_msg(parent_to_child[i * 2 + 1], enc_txt);                /* Assign task to child process */
                 write_pipe_msg(parent_to_child[i * 2 + 1], dec_txt);
-                is_free[i] = FALSE;
+                is_free[i] = FALSE;                                 /* Set this child process state to NOT FREE */
                 break;
             }
         }
-    } else {
-        for (i = 0; i < process_number_limit; ++i) {            /* If select is OK */
+    } else {                                                /* If get message from child process */
+        for (i = 0; i < process_number_limit; ++i) {
             if (FD_ISSET(child_to_parent[i * 2], &rfds)) {
                 read_pipe_msg(child_to_parent[i * 2], read_mark);
-                if (strcmp(read_mark, CHILD_PROCESS_INIT) == 0) {
-                    printf("Send init msg!\n");
+                if (strcmp(read_mark, CHILD_PROCESS_INIT) == 0) {           /* If messge is init message */
                     strcpy(send_mark, DISPATCH_MSG);
                     send_socket_msg(sockfd, send_mark);
-                } else if (strcmp(read_mark, CHILD_PROCESS_SUCCESS) == 0) {
+                } else if (strcmp(read_mark, CHILD_PROCESS_SUCCESS) == 0) {         /* If message is success messge */
                     is_free[i] = TRUE;
-                    get_time();
-                    read_pipe_msg(child_to_parent[i * 2], fcfs_file_buf);
-                    printf("[%s] Child process ID #%d success! decrypt %s.\n", out_time, *(pid_array + i), fcfs_file_buf);
-
-                    printf("Send success msg!\n");
+                    read_pipe_msg(child_to_parent[i * 2], fcfs_file_buf);           /* Read successful decrypted file name */
                     strcpy(send_mark, SUCCESS_MSG);
                     sprintf(fcfs_pid_buf, "%d", pid_array[i]);
-                    send_socket_msg(sockfd, send_mark);
+                    send_socket_msg(sockfd, send_mark);                             /* Send message to server side about this successful decryption */
                     send_socket_msg(sockfd, fcfs_file_buf);
                     send_socket_msg(sockfd, fcfs_pid_buf);
-                } else if (strcmp(read_mark, CHILD_PROCESS_WARNING) == 0 || strcmp(read_mark, CHILD_PROCESS_FAILURE) == 0) {
-                    if (strcmp(read_mark, CHILD_PROCESS_WARNING) == 0) {
-                        is_free[i] = TRUE;
+                } else if (strcmp(read_mark, CHILD_PROCESS_WARNING) == 0 || strcmp(read_mark, CHILD_PROCESS_FAILURE) == 0) {        /* If meet warning or failure */
+                    if (strcmp(read_mark, CHILD_PROCESS_WARNING) == 0) {            /* If message is warning message */
+                        is_free[i] = TRUE;                                          /* Set this child process state to FREE */
                     }
-                    read_pipe_msg(child_to_parent[i * 2], fcfs_err_buf);
-                    //get_time();
-                    //printf("[%s] Child process ID #%d have warning/error: %s!\n", out_time, *(pid_array + i), fcfs_err_buf);
-                    printf("Send failed msg!\n");
+                    read_pipe_msg(child_to_parent[i * 2], fcfs_err_buf);            /* Read error messge from child process */
                     strcpy(send_mark, FAILURE_MSG);
-                    send_socket_msg(sockfd, send_mark);
+                    send_socket_msg(sockfd, send_mark);                             /* Send error message to server side */
                     send_socket_msg(sockfd, fcfs_err_buf);
-                } else {
+                } else {                                                    /* If message can not be identify */
                     get_time();
                     printf("[%s] (Process ID #%d) ERROR: Wrong message has been read from pipe after select.\n", out_time, getpid());
                     main_flag = EXIT_FAILURE;

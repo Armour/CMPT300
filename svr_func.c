@@ -2,7 +2,7 @@
  *
  *  svr_func.c
  *
- *  this file contains many functions that used in lyrebird server side
+ *  this file contains many functions that used in lyrebird server
  *
  *  Project         : LyreBird
  *  Name            : Chong Guo
@@ -57,10 +57,10 @@ void get_time(void) {
 
 void send_socket_msg(int socket, char *msg) {
     msg_len = htonl(strlen(msg));
-    send(socket, &msg_len, sizeof(uint32_t), 0);
-    send(socket, msg, ntohl(msg_len), 0);
+    send(socket, &msg_len, sizeof(uint32_t), 0);            /* Send message length first */
+    send(socket, msg, ntohl(msg_len), 0);                   /* Send message content */
     //printf("Send msg len: !%u!\n", ntohl(msg_len));
-    printf("Send msg content: !%s!\n", msg);
+    //printf("Send msg content: !%s!\n", msg);
 }
 
 /*
@@ -77,11 +77,31 @@ void send_socket_msg(int socket, char *msg) {
  */
 
 void recv_socket_msg(int socket, char *msg) {
-    recv(socket, &msg_len, sizeof(uint32_t), 0);
-    recv(socket, msg, ntohl(msg_len), 0);
+    recv(socket, &msg_len, sizeof(uint32_t), 0);            /* Recv message length first */
+    recv(socket, msg, ntohl(msg_len), 0);                   /* Recv message content first */
     msg[ntohl(msg_len)] = '\0';
     //printf("Recv msg len: !%u!\n", ntohl(msg_len));
-    printf("Recv msg content: !%s!\n", msg);
+    //printf("Recv msg content: !%s!\n", msg);
+}
+
+/*
+ * Function: Init
+ * -------------------
+ *   This function is used to init some variables,
+ *   like malloc timestamp string, encrypt text string, etc.
+ *
+ *   Parameters:
+ *      no parameters
+ *
+ *   Returns:
+ *      void
+ */
+
+void init(void) {
+    out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
+    enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
+    dec_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
+    init_cli_sock();                                        /* Init client socket array */
 }
 
 /*
@@ -148,8 +168,6 @@ void open_log(char *argv[]) {
         clean_up(CLEAN_TO_CONFIG);
         exit(EXIT_FAILURE);
     }
-
-    fuck = fopen("fuck.txt", "w");             /* Output log file */
 }
 
 /*
@@ -298,7 +316,7 @@ void bind_socket(void) {
  */
 
 void listen_socket(void) {
-    if (listen(sockfd, CLIENT_MAXNUM) < 0) {                                            /* Listen at the server socket */
+    if (listen(sockfd, CLIENT_MAXNUM) < 0) {                                    /* Listen at the server socket */
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Server listen at socket failed!\n", out_time, getpid());
         clean_up(CLEAN_TO_SOCKET);
@@ -343,7 +361,7 @@ void print_server_info(void) {
 
 void init_cli_sock(void) {
     int i;
-    for (i = 0; i < CLIENT_MAXNUM; ++i) {
+    for (i = 0; i < CLIENT_MAXNUM; ++i) {               /* Init client socket array */
         sockfd_cli[i] = 0;
     }
 }
@@ -363,10 +381,10 @@ void init_cli_sock(void) {
 void init_select(void) {
     int i;
     FD_ZERO(&rfds);
-    FD_SET(sockfd, &rfds);                      /* The server socket should also be include */
+    FD_SET(sockfd, &rfds);                              /* The server socket should also be include */
     max_fds = sockfd;
     for (i = 0; i < CLIENT_MAXNUM; i++) {
-        if (sockfd_cli[i] > 0)                  /* If this client socket exist */
+        if (sockfd_cli[i] > 0)                          /* If this client socket exist */
             FD_SET(sockfd_cli[i], &rfds);
         if (sockfd_cli[i] > max_fds)
             max_fds = sockfd_cli[i];
@@ -408,7 +426,7 @@ int select_func(void) {
  */
 
 int accept_new_cli(void) {
-    if ((sockfd_new = accept(sockfd, (struct sockaddr *)&cli_addr, &addr_len)) < 0) {       /* Accept new connections from client machine */
+    if ((sockfd_new = accept(sockfd, (struct sockaddr *)&cli_addr, &addr_len)) < 0) {           /* Accept new connections from client machine */
         get_time();
         fprintf(flog, "[%s] (Process ID #%d) ERROR: Server accept client socket failed!\n", out_time, getpid());
         main_flag = EXIT_FAILURE;
@@ -454,7 +472,7 @@ int check_connect(void) {
  */
 
 int print_client_info(void) {
-    if (inet_ntop(AF_INET, &cli_addr.sin_addr, ip_buffer, sizeof(ip_buffer)) == NULL) {         /* Check if get client ip address failed */
+    if (inet_ntop(AF_INET, &cli_addr.sin_addr, ip_buffer, sizeof(ip_buffer)) == NULL) {             /* Check if get client ip address failed */
         get_time();
         fprintf(flog, "[%s] (Process ID #%d) ERROR: Server get client ip address by inet_ntop failed!\n", out_time, getpid());
         main_flag = EXIT_FAILURE;
@@ -532,7 +550,6 @@ void handle_dispatch(int sock_num) {
     send_socket_msg(sock_num, send_mark);
     send_socket_msg(sock_num, enc_txt);
     send_socket_msg(sock_num, dec_txt);
-
     get_time();
     fprintf(flog, "[%s] The lyrebird client %s has been given the task of decrypting %s.\n", out_time, client_ip, enc_txt);
     max_task++;
@@ -552,7 +569,7 @@ void handle_dispatch(int sock_num) {
  */
 
 void handle_failure(int sock_num) {
-    char recv_buffer[ERROR_MAXLENGTH];                  /* This is the buffer that we used to read message from socket */
+    char recv_buffer[ERROR_MAXLENGTH];                      /* This is the buffer that we used to read message from socket */
     printf("Recv handle failure!\n");
     recv_socket_msg(sock_num, recv_buffer);
     get_time();
@@ -701,9 +718,11 @@ void quit_server(void) {
  */
 
 void clean_up(int step) {
-    if (step >= CLEAN_TO_TXT) free(enc_txt);
-    if (step >= CLEAN_TO_TXT) free(dec_txt);
-    if (step >= CLEAN_TO_TIME) free(out_time);
+    if (step >= CLEAN_TO_TIME) {
+        free(enc_txt);
+        free(dec_txt);
+        free(out_time);
+    }
     if (step >= CLEAN_TO_CONFIG) fclose(fcfg);
     if (step >= CLEAN_TO_LOG) fclose(flog);
     if (step >= CLEAN_TO_IFADDR) freeifaddrs(ifaddr);

@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <netdb.h>
-#include "common_macro.h"
+#include "lyre_macro.h"
 
 /* Decrypt each tweet through 4 steps */
 char *decrypt_each(char *tweet);

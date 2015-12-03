@@ -28,15 +28,12 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
-#include "cli_macro.h"
-#include "common_macro.h"
+#include "lyre_macro.h"
 
 extern int main_flag;                           /* Used to store return value for main function */
 extern char *enc_txt;                           /* Used to store encrypted file name */
 extern char *dec_txt;                           /* Used to store decrypted file name */
 extern char *out_time;                          /* Used to store output time */
-
-extern FILE *fuck;
 
 extern fd_set rfds;                             /* The set of file descriptor */
 extern int max_descriptor;                      /* The max number of file descriptor */
@@ -58,12 +55,15 @@ extern int sockfd;                                      /* Socket file descripto
 extern socklen_t addr_len;                              /* The size of sockaddr_in */
 extern struct sockaddr_in serv_addr, cli_addr;          /* Used to store the server and client address information */
 
-extern uint32_t msg_len;                               /* The length of sent message */
+extern uint32_t msg_len;                                /* The length of sent message */
 extern char send_mark[MARK_MAXLENGTH];                  /* A buffer that used to store sent message */
 extern char recv_mark[MARK_MAXLENGTH];                  /* A buffer that used to store received message */
 extern char read_mark[MARK_MAXLENGTH];                  /* A buffer that used to store read message */
 extern char write_mark[MARK_MAXLENGTH];                 /* A buffer that used to store write message */
 
+
+/* Used to get current time in specify format */
+void get_time(void);
 
 /* Used to send a message through socket with its length send first */
 void send_socket_msg(int socket, char *msg);
@@ -77,8 +77,8 @@ void write_pipe_msg(int pipe, char *msg);
 /* Used to read a message through pipe with its length send first */
 int read_pipe_msg(int pipe, char *msg);
 
-/* Used to get current time in specify format */
-void get_time(void);
+/* Init some varibles (like malloc timestamp string, encrypt text string, etc.) */
+void init(void);
 
 /* Used to check the parameters in command */
 void check_par(int argc, char *argv[]);
@@ -97,15 +97,6 @@ void print_connect_info(char *argv[]);
 
 /* Used to send the connection message to server */
 void send_connect_msg(void);
-
-/* Used to wait all child processes quit */
-void wait_all_child(void);
-
-/* Used to free memory and close file pointer before program exit */
-void clean_up(int step);
-
-/* Used to handle signal */
-void signal_handler(int sig_num);
 
 /* Used to initialize the max number of pipe descriptor */
 void init_pipe(void);
@@ -130,6 +121,18 @@ void close_ctp_pipe_with_pid(int pid);
 
 /* Used to read all remaining messages in each child process */
 void read_rmng_msg(void);
+
+/* Used to wait all child processes quit */
+void wait_all_child(void);
+
+/* Check client exit state and send it to server before exit */
+void check_client_exit_state(void);
+
+/* Used to free memory and close file pointer before program exit */
+void clean_up(int step);
+
+/* Used to handle signal */
+void signal_handler(int sig_num);
 
 #endif
 
