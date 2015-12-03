@@ -40,6 +40,8 @@ void get_time(void) {
     time(&raw_time);
     tmp_time = localtime(&raw_time);
     strftime(out_time, TIME_MAXLENGTH, "%a %b %d %H:%M:%S %Y", tmp_time);       /* Format time */
+    if (out_time[8] == '0')
+        out_time[8] = ' ';
 }
 
 /*

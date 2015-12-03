@@ -40,6 +40,8 @@ void get_time(void) {
     time(&raw_time);
     tmp_time = localtime(&raw_time);
     strftime(out_time, TIME_MAXLENGTH, "%a %b %d %H:%M:%S %Y", tmp_time);       /* Format time */
+    if (out_time[8] == '0')
+        out_time[8] = ' ';
 }
 
 /*
@@ -668,7 +670,8 @@ void wait_clients_quit(void) {
             if (FD_ISSET(i, &rfds)) {
                 client_ip = get_host_by_sockfd(i);              /* Get the client's ip address */
                 recv_socket_msg(i, recv_mark);                  /* Get the response message from client side */
-                handle_client_msg(i);
+                if (strcmp(recv_mark, CONNECT_MSG) != 0)        /* Ignore new connect client */
+                    handle_client_msg(i);
                 break;
             }
         }
