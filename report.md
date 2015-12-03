@@ -1,5 +1,11 @@
 <center><h1>Lyrebird</h1></center>
 
+ <center><h4>Name            : Chong Guo</h4></center>
+ <center><h4>Student ID      : 301295753</h4></center>
+ <center><h4>SFU username    : armourg</h4></center>
+ <center><h4>Lecture section : D1</h4></center>
+ <center><h4>Instructor      : Brain G.Booth</h4></center>
+ <center><h4>TA              : Scott Kristjanson</h4></center>
 
 ## Overview
 This program is used to **decrypt large amounts of encrypted tweet files**, to reduce the overall running time and take advantages of multiple CPU cores, it used **fork** function to spread tasks across multiple processes and **pipes** to pass messages between the parent process and child processes. As for **scheduling** problem, it will choose one algorithm between "round-robin" and "first come first served" which depends on the input config file.
