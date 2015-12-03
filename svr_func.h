@@ -52,11 +52,10 @@ extern struct sockaddr_in serv_addr, cli_addr;         /* Used to store the serv
 extern int read_flag;                       /* This is a flag that means program should read a new line from config file */
 extern int finish_flag;                     /* This is a flag that indicate reaching the end of config file */
 extern char *client_ip;                     /* A pointer to the IP address char array of one client */
-extern int max_task;                        /* This is the number of the decryption tasks that has been assigned */
-extern int cnt_task;                        /* This is the number of the decryption tasks that has already finished */
 extern char read_type;                      /* This is the message that read from one socket to client side */
 
 extern uint32_t msg_len;                               /* The length of sent message */
+extern int remained_cli;                               /* The number of the remained clients */
 extern char ip_buffer[INET_ADDRSTRLEN];                /* A buffer that used to store client IP address */
 extern char send_mark[MARK_MAXLENGTH];                 /* A buffer that used to store sent message */
 extern char recv_mark[MARK_MAXLENGTH];                 /* A buffer that used to store received message */
@@ -140,7 +139,7 @@ void handle_client_msg(int sock_num);
 int ask_clients_quit(void);
 
 /* Used to wait all clients quit */
-void wait_clients_quit(int remained_cli);
+void wait_clients_quit(void);
 
 /* Used to clean up everything and quit the server */
 void quit_server(void);

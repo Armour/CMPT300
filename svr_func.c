@@ -60,7 +60,7 @@ void send_socket_msg(int socket, char *msg) {
     send(socket, &msg_len, sizeof(uint32_t), 0);            /* Send message length first */
     send(socket, msg, ntohl(msg_len), 0);                   /* Send message content */
     //printf("Send msg len: !%u!\n", ntohl(msg_len));
-    //printf("Send msg content: !%s!\n", msg);
+    printf("Send msg content: !%s!\n", msg);
 }
 
 /*
@@ -81,7 +81,7 @@ void recv_socket_msg(int socket, char *msg) {
     recv(socket, msg, ntohl(msg_len), 0);                   /* Recv message content first */
     msg[ntohl(msg_len)] = '\0';
     //printf("Recv msg len: !%u!\n", ntohl(msg_len));
-    //printf("Recv msg content: !%s!\n", msg);
+    printf("Recv msg content: !%s!\n", msg);
 }
 
 /*
@@ -528,8 +528,6 @@ void handle_success(int sock_num) {
     recv_socket_msg(sock_num, recv_pid);
     get_time();
     fprintf(flog, "[%s] The lyrebird client %s has successfully decrypted %s in process %s.\n", out_time, client_ip, recv_buffer, recv_pid);
-    cnt_task++;
-    printf("%u cnt: %d max: %d\n", read_type, cnt_task, max_task);
 }
 
 /*
@@ -552,8 +550,6 @@ void handle_dispatch(int sock_num) {
     send_socket_msg(sock_num, dec_txt);
     get_time();
     fprintf(flog, "[%s] The lyrebird client %s has been given the task of decrypting %s.\n", out_time, client_ip, enc_txt);
-    max_task++;
-    printf("%u cnt: %d max: %d\n", read_type, cnt_task, max_task);
 }
 
 /*
@@ -574,8 +570,6 @@ void handle_failure(int sock_num) {
     recv_socket_msg(sock_num, recv_buffer);
     get_time();
     fprintf(flog, "[%s] The lyrebird client %s has encountered an error: %s", out_time, client_ip, recv_buffer);
-    cnt_task++;
-    printf("%u cnt: %d max: %d\n", read_type, cnt_task, max_task);
 }
 
 /*
@@ -591,23 +585,46 @@ void handle_failure(int sock_num) {
  */
 
 void handle_client_msg(int sock_num) {
+    int i;
     int need_dispatch = 0;                              /* If set to 1, then means this time server need to dispatch new task to client */
+    int client_close = 0;                                /* If set to 1, then means recv the disconnect message from client with socket sock_num */
     if (strcmp(recv_mark, SUCCESS_MSG) == 0) {                  /* If it is a success message */
         handle_success(sock_num);
         need_dispatch = 1;
     } else if (strcmp(recv_mark, FAILURE_MSG) == 0) {           /* If it is a failure message */
         handle_failure(sock_num);
         need_dispatch = 1;
+    } else if (strcmp(recv_mark, DISCONNECT_SUCC_MSG) == 0) {           /* If it is a disconnect with success state message */
+        get_time();
+        fprintf(flog, "[%s] lyrebird client %s has disconnected expectedly.\n", out_time, client_ip);
+        client_close = 1;
+    } else if (strcmp(recv_mark, DISCONNECT_FAIL_MSG) == 0) {           /* If it is a disconnect with failed state message */
+        get_time();
+        fprintf(flog, "[%s] lyrebird client %s has disconnected unexpectedly.\n", out_time, client_ip);
+        client_close = 1;
     }
-    if (strcmp(recv_mark, DISPATCH_MSG) == 0 || need_dispatch == 1) {       /* If it is a dispatch message or need dispatch */
+    if (strcmp(recv_mark, DISPATCH_MSG) == 0 || (!finish_flag && need_dispatch == 1)) {       /* If it is a dispatch message or need dispatch */
         if (finish_flag) return;
         handle_dispatch(sock_num);
         read_flag = 1;
         return;
     }
+    if (client_close) {
+        for (i = 0; i < CLIENT_MAXNUM; ++i) {               /* Close socket of this client */
+            if (sockfd_cli[i] == sock_num) {
+                close(sock_num);
+                sockfd_cli[i] = 0;
+                memset(ipaddr_cli[i], 0, sizeof(ipaddr_cli[i]));
+                break;
+            }
+        }
+        remained_cli--;
+        printf("Remained: %d\n", remained_cli);
+        return;
+    }
+    if (finish_flag) return;
     get_time();
     fprintf(flog, "[%s] (Process ID #%d) ERROR: Server failed when checking message type from client machine!\n", out_time, getpid());
-    sleep(100);
     main_flag = EXIT_FAILURE;
 }
 
@@ -643,14 +660,14 @@ int ask_clients_quit(void) {
  *   This function is used to wait all clients quit
  *
  *   Parameters:
- *     remained_cli: the number of remained clients
+ *     no parameters
  *
  *   Returns:
  *      void
  */
 
-void wait_clients_quit(int remained_cli) {
-    int i, j;
+void wait_clients_quit(void) {
+    int i;
     while (remained_cli) {
         init_select();
         if (select_func() == -1) break;                 /* Select */
@@ -658,29 +675,8 @@ void wait_clients_quit(int remained_cli) {
             if (FD_ISSET(i, &rfds)) {
                 client_ip = get_host_by_sockfd(i);              /* Get the client's ip address */
                 printf("Wait for %s socket %d\n", client_ip, i);
-                printf("Recv remained mark!\n");
                 recv_socket_msg(i, recv_mark);                  /* Get the response message from client side */
-                if (strcmp(recv_mark, DISCONNECT_SUCC_MSG) == 0 || strcmp(recv_mark, DISCONNECT_FAIL_MSG) == 0) {
-                    get_time();
-                    if (strcmp(recv_mark, DISCONNECT_SUCC_MSG) == 0)
-                        fprintf(flog, "[%s] lyrebird client %s has disconnected expectedly.\n", out_time, client_ip);
-                    if (strcmp(recv_mark, DISCONNECT_FAIL_MSG) == 0)
-                        fprintf(flog, "[%s] lyrebird client %s has disconnected unexpectedly.\n", out_time, client_ip);
-                    for (j = 0; j < CLIENT_MAXNUM; ++j) {               /* Close socket of this client */
-                        if (sockfd_cli[j] == i) {
-                            close(i);
-                            sockfd_cli[j] = 0;
-                            memset(ipaddr_cli[j], 0, sizeof(ipaddr_cli[j]));
-                            break;
-                        }
-                    }
-                    remained_cli--;
-                    printf("Remained: %d\n", remained_cli);
-                } else {
-                    get_time();
-                    fprintf(flog, "[%s] (Process ID #%d) ERROR: Server failed when checking message type from client machine!\n", out_time, getpid());
-                    main_flag = EXIT_FAILURE;
-                }
+                handle_client_msg(i);
                 break;
             }
         }

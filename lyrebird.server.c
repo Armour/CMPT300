@@ -44,11 +44,10 @@ struct sockaddr_in serv_addr, cli_addr;         /* Used to store the server and 
 int read_flag = 1;                  /* This is a flag that means program should read a new line from config file */
 int finish_flag = 0;                /* This is a flag that indicate reaching the end of config file */
 char *client_ip;                    /* A pointer to the IP address char array of one client */
-int max_task = 0;                   /* This is the number of the decryption tasks that has been assigned */
-int cnt_task = 0;                   /* This is the number of the decryption tasks that has already finished */
 char read_type;                     /* This is the message that read from one socket to client side */
 
 uint32_t msg_len;                               /* The length of sent message */
+int remained_cli;                               /* The number of the remained clients */
 char ip_buffer[INET_ADDRSTRLEN];                /* A buffer that used to store client IP address */
 char send_mark[MARK_MAXLENGTH];                 /* A buffer that used to store sent message */
 char recv_mark[MARK_MAXLENGTH];                 /* A buffer that used to store received message */
@@ -89,13 +88,12 @@ int main(int argc, char *argv[]) {
         if (read_flag) {
             if (fscanf(fcfg, "%s", enc_txt) == EOF) {
                 finish_flag = 1;
+                break;
             } else {
                 fscanf(fcfg, "%s", dec_txt);
             }
         }
         read_flag = 0;
-
-        if (finish_flag && cnt_task == max_task) break;
 
         init_select();                      /* Select function */
         if (select_func() == -1) break;
@@ -103,7 +101,6 @@ int main(int argc, char *argv[]) {
         for (i = 0; i < max_fds + 1; i++) {
             if (FD_ISSET(i, &rfds)) {
                 if (i == sockfd) {                              /* If have a new client connect */
-                    printf("New client!!\n");
                     if (accept_new_cli() == -1) break;          /* Try to accept new client */
                     if (check_connect() == -1) break;           /* Check connect message from client */
                     if (print_client_info() == -1) break;       /* Print the information of client side */
@@ -121,9 +118,9 @@ int main(int argc, char *argv[]) {
         if (main_flag == EXIT_FAILURE) break;
     }
 
-    int remained_cli = ask_clients_quit();                      /* Ask clients quit and count the remain clients number */
+    remained_cli = ask_clients_quit();                          /* Ask clients quit and count the remain clients number */
     printf("Total Remained Client: %d\n", remained_cli);
-    wait_clients_quit(remained_cli);                            /* Wait for all clients quit */
+    wait_clients_quit();                                        /* Wait for all clients quit */
     quit_server();                                              /* Clean up and quit server, also print the message to log */
 
     return main_flag;
