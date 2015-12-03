@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
         pid = fork();                                       /* Fork! */
         if (pid < 0) {                                      /* If fork failed */
             get_time();
-            printf("[%s] (Process ID #%d) ERROR: Fork failed! Client will exit now without finish its tasks!\n", out_time, getpid());
+            printf("[%s] (Process ID #%d) ERROR: Fork failed! Client will exit!\n", out_time, getpid());
             main_flag = EXIT_FAILURE;                       /* Exit non-zero value */
             break;                                          /* Break and still need to wait for all child processes */
         }

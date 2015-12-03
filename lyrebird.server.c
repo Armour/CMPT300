@@ -119,7 +119,6 @@ int main(int argc, char *argv[]) {
     }
 
     remained_cli = ask_clients_quit();                          /* Ask clients quit and count the remain clients number */
-    printf("Total Remained Client: %d\n", remained_cli);
     wait_clients_quit();                                        /* Wait for all clients quit */
     quit_server();                                              /* Clean up and quit server, also print the message to log */
 

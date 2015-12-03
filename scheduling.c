@@ -47,7 +47,6 @@ int fcfs(void) {
     if (FD_ISSET(sockfd, &rfds)) {                          /* If get message from server */
         recv_socket_msg(sockfd, recv_mark);                 /* Read message from server side */
         if (strcmp(recv_mark, CLIENT_EXIT_MSG) == 0) {
-            printf("Server ask to quit!\n");
             return FCFS_EXIT;
         }
         recv_socket_msg(sockfd, enc_txt);                   /* If not ask exit, then need to do decryption, so we recv enc_txt and dec_txt */

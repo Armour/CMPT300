@@ -60,7 +60,7 @@ void send_socket_msg(int socket, char *msg) {
     send(socket, &msg_len, sizeof(uint32_t), 0);            /* Send message length first */
     send(socket, msg, ntohl(msg_len), 0);                   /* Send message content */
     //printf("Send msg len: !%u!\n", ntohl(msg_len));
-    printf("Send msg content: !%s!\n", msg);
+    //printf("Send msg content: !%s!\n", msg);
 }
 
 /*
@@ -81,7 +81,7 @@ void recv_socket_msg(int socket, char *msg) {
     recv(socket, msg, ntohl(msg_len), 0);                   /* Recv message content first */
     msg[ntohl(msg_len)] = '\0';
     //printf("Recv msg len: !%u!\n", ntohl(msg_len));
-    printf("Recv msg content: !%s!\n", msg);
+    //printf("Recv msg content: !%s!\n", msg);
 }
 
 /*
@@ -406,7 +406,7 @@ void init_select(void) {
 int select_func(void) {
     if (select(max_fds + 1, &rfds, NULL, NULL, NULL) == -1) {               /* Check if select function failed */
         get_time();
-        fprintf(flog, "[%s] (Process ID #%d) ERROR: Server failed when run select function!\n", out_time, getpid());
+        printf("[%s] (Process ID #%d) ERROR: Server failed when run select function!\n", out_time, getpid());
         main_flag = EXIT_FAILURE;
         return -1;
     }
@@ -428,7 +428,7 @@ int select_func(void) {
 int accept_new_cli(void) {
     if ((sockfd_new = accept(sockfd, (struct sockaddr *)&cli_addr, &addr_len)) < 0) {           /* Accept new connections from client machine */
         get_time();
-        fprintf(flog, "[%s] (Process ID #%d) ERROR: Server accept client socket failed!\n", out_time, getpid());
+        printf("[%s] (Process ID #%d) ERROR: Server accept client socket failed!\n", out_time, getpid());
         main_flag = EXIT_FAILURE;
         return -1;
     }
@@ -448,11 +448,10 @@ int accept_new_cli(void) {
  */
 
 int check_connect(void) {
-    printf("Recv connect msg!\n");
     recv_socket_msg(sockfd_new, recv_mark);
     if (strcmp(recv_mark, CONNECT_MSG) != 0) {                              /* If is not the connect message */
         get_time();
-        fprintf(flog, "[%s] (Process ID #%d) ERROR: Server accept client socket failed!\n", out_time, getpid());
+        printf("[%s] (Process ID #%d) ERROR: Server get client connect message failed!\n", out_time, getpid());
         main_flag = EXIT_FAILURE;
         return -1;
     }
@@ -474,7 +473,7 @@ int check_connect(void) {
 int print_client_info(void) {
     if (inet_ntop(AF_INET, &cli_addr.sin_addr, ip_buffer, sizeof(ip_buffer)) == NULL) {             /* Check if get client ip address failed */
         get_time();
-        fprintf(flog, "[%s] (Process ID #%d) ERROR: Server get client ip address by inet_ntop failed!\n", out_time, getpid());
+        printf("[%s] (Process ID #%d) ERROR: Server get client ip address by inet_ntop failed!\n", out_time, getpid());
         main_flag = EXIT_FAILURE;
         return -1;
     }
@@ -500,7 +499,6 @@ void store_client_ip(void) {
     for (i = 0; i < CLIENT_MAXNUM; ++i) {
         if (sockfd_cli[i] == 0) {                               /* If find a empty place for storing client socket */
             sockfd_cli[i] = sockfd_new;
-            printf("new client in sokcet %d array %d\n", sockfd_new, i);
             memset(ipaddr_cli[i], 0, sizeof(ipaddr_cli[i]));
             strcpy(ipaddr_cli[i], ip_buffer);
             break;
@@ -523,7 +521,6 @@ void store_client_ip(void) {
 void handle_success(int sock_num) {
     char recv_pid[PID_MAXLENGTH];                   /* This is the pid number that read from one socket to client side */
     char recv_buffer[FILE_MAXLENGTH];               /* This is the buffer that we used to read message from socket */
-    printf("Recv handle success!\n");
     recv_socket_msg(sock_num, recv_buffer);
     recv_socket_msg(sock_num, recv_pid);
     get_time();
@@ -543,7 +540,6 @@ void handle_success(int sock_num) {
  */
 
 void handle_dispatch(int sock_num) {
-    printf("Send dispatch msg!\n");
     strcpy(send_mark, CLIENT_WORK_MSG);                        /* Assign new task to client */
     send_socket_msg(sock_num, send_mark);
     send_socket_msg(sock_num, enc_txt);
@@ -566,7 +562,6 @@ void handle_dispatch(int sock_num) {
 
 void handle_failure(int sock_num) {
     char recv_buffer[ERROR_MAXLENGTH];                      /* This is the buffer that we used to read message from socket */
-    printf("Recv handle failure!\n");
     recv_socket_msg(sock_num, recv_buffer);
     get_time();
     fprintf(flog, "[%s] The lyrebird client %s has encountered an error: %s", out_time, client_ip, recv_buffer);
@@ -619,12 +614,11 @@ void handle_client_msg(int sock_num) {
             }
         }
         remained_cli--;
-        printf("Remained: %d\n", remained_cli);
         return;
     }
     if (finish_flag) return;
     get_time();
-    fprintf(flog, "[%s] (Process ID #%d) ERROR: Server failed when checking message type from client machine!\n", out_time, getpid());
+    printf("[%s] (Process ID #%d) ERROR: Server failed when checking message type from client machine!\n", out_time, getpid());
     main_flag = EXIT_FAILURE;
 }
 
@@ -645,7 +639,6 @@ int ask_clients_quit(void) {
     int remained_cli = 0;
     for (i = 0; i < CLIENT_MAXNUM; ++i) {
         if (sockfd_cli[i] > 0) {                        /* If this client still connected */
-            printf("Send client exit msg!\n");
             strcpy(send_mark, CLIENT_EXIT_MSG);
             send_socket_msg(sockfd_cli[i], send_mark);
             remained_cli++;
@@ -674,7 +667,6 @@ void wait_clients_quit(void) {
         for (i = 0; i < max_fds + 1; i++) {
             if (FD_ISSET(i, &rfds)) {
                 client_ip = get_host_by_sockfd(i);              /* Get the client's ip address */
-                printf("Wait for %s socket %d\n", client_ip, i);
                 recv_socket_msg(i, recv_mark);                  /* Get the response message from client side */
                 handle_client_msg(i);
                 break;

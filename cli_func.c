@@ -60,7 +60,7 @@ void send_socket_msg(int socket, char *msg) {
     send(socket, &msg_len, sizeof(uint32_t), 0);                /* Send the message length first */
     send(socket, msg, ntohl(msg_len), 0);                       /* Send the message content */
     //printf("Send msg len: !%u!\n", ntohl(msg_len));
-    printf("Send msg content: !%s!\n", msg);
+    //printf("Send msg content: !%s!\n", msg);
 }
 
 /*
@@ -81,7 +81,7 @@ void recv_socket_msg(int socket, char *msg) {
     recv(socket, msg, ntohl(msg_len), 0);                       /* Recv the message content */
     msg[ntohl(msg_len)] = '\0';
     //printf("Recv msg len: !%u!\n", ntohl(msg_len));
-    printf("Recv msg content: !%s!\n", msg);
+    //printf("Recv msg content: !%s!\n", msg);
 }
 
 /*
@@ -310,7 +310,7 @@ void init_pipe(void) {
     if (parent_to_child == NULL) {                                      /* Create parent to child pipes and check whether failed or not */
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Malloc parent_to_child failed!\n", out_time, getpid());
-        free(out_time);
+        clean_up(CLEAN_TO_SOCKET);
         exit(EXIT_FAILURE);
     }
 
@@ -318,7 +318,7 @@ void init_pipe(void) {
     if (child_to_parent == NULL) {                                      /* Create child to parent pipes and check whether failed or not */
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Malloc child_to_parent failed!\n", out_time, getpid());
-        free(out_time);
+        clean_up(CLEAN_TO_SOCKET);
         free(parent_to_child);
         exit(EXIT_FAILURE);
     }
@@ -327,7 +327,7 @@ void init_pipe(void) {
     if (pid_array == NULL) {                                            /* Create child pid array and check whether failed or not */
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Malloc pid_array failed!\n", out_time, getpid());
-        free(out_time);
+        clean_up(CLEAN_TO_SOCKET);
         free(parent_to_child);
         free(child_to_parent);
         exit(EXIT_FAILURE);
@@ -337,7 +337,7 @@ void init_pipe(void) {
     if (is_free == NULL) {                                            /* Create child pid array and check whether failed or not */
         get_time();
         printf("[%s] (Process ID #%d) ERROR: Malloc is_free failed!\n", out_time, getpid());
-        free(out_time);
+        clean_up(CLEAN_TO_SOCKET);
         free(parent_to_child);
         free(child_to_parent);
         free(pid_array);
@@ -351,7 +351,7 @@ void init_pipe(void) {
         if (pipe(parent_to_child + i * 2)) {                            /* Create pipe from parent to child */
             get_time();
             printf("[%s] (Process ID #%d) ERROR: Create parent to child pipe number %d failed!\n", out_time, getpid(), i);
-            free(out_time);
+            clean_up(CLEAN_TO_SOCKET);
             free(parent_to_child);
             free(child_to_parent);
             free(pid_array);
@@ -361,7 +361,7 @@ void init_pipe(void) {
         if (pipe(child_to_parent + i * 2)) {                            /* Create pipe from child to parent */
             get_time();
             printf("[%s] (Process ID #%d) ERROR: Create child to parent pipe number %d failed!\n", out_time, getpid(), i);
-            free(out_time);
+            clean_up(CLEAN_TO_SOCKET);
             free(parent_to_child);
             free(child_to_parent);
             free(pid_array);
@@ -564,11 +564,6 @@ void wait_all_child(void) {
     for (i = 0; i < process_number_limit; i++) {            /* Parent process wait for all child processes before exit */
         int state;
         pid_t pid = wait(&state);                           /* Wait until found one child process finished */
-        printf("Wait child state: %d\n", state);
-        if (state != EXIT_SUCCESS) {                                   /* If child process terminate unexpectly! */
-            get_time();
-            printf("[%s] Child process ID #%d did not terminate successfully.\n", out_time, (int)pid);
-        }
         close_ctp_pipe_with_pid(pid);                       /* Close the pipe that uses to read messages from exited child process */
     }
 }
@@ -588,17 +583,15 @@ void wait_all_child(void) {
 
 void check_client_exit_state(void) {
     if (main_flag == EXIT_SUCCESS) {                        /* If client exit with state EXIT_SUCCESS */
-        printf("Send exit success mark!\n");
         strcpy(send_mark, DISCONNECT_SUCC_MSG);
         send_socket_msg(sockfd, send_mark);
         get_time();
         printf("[%s] lyrebird client: PID %d completed its tasks and is exiting successfully.\n", out_time, getpid());
     } else {                                                /* If client exit with other state */
-        printf("Send exit failed mark!\n");
         strcpy(send_mark, DISCONNECT_FAIL_MSG);
         send_socket_msg(sockfd, send_mark);
         get_time();
-        printf("[%s] lyrebird client: PID %d completed its tasks but exiting unexpectly!\n", out_time, getpid());
+        printf("[%s] lyrebird client: PID %d completed its tasks and is exiting successfully.\n", out_time, getpid());
     }
 }
 
