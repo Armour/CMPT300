@@ -23,7 +23,6 @@
 #include "decrypt.h"
 #include "dec_func.h"
 #include "line_io.h"
-#include "time.h"
 #include "memwatch.h"
 
 int len = 0;                                /* Length of tweet */

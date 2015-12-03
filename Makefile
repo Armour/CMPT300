@@ -19,8 +19,8 @@ CFLAGS  = -DMEMWATCH -DMEMWATCH_STDIO
 LIBS = -lm
 TARGET_SERVER = lyrebird.server
 TARGET_CLIENT = lyrebird.client
-OBJECTS_SERVER = lyrebird.server.o memwatch.o
-OBJECTS_CLIENT = lyrebird.client.o memwatch.o line_io.o dec_func.o decrypt.o pipe.o scheduling.o
+OBJECTS_SERVER = lyrebird.server.o svr_func.o memwatch.o
+OBJECTS_CLIENT = lyrebird.client.o cli_func.o dec_func.o decrypt.o scheduling.o line_io.o memwatch.o
 
 .PHONY: all build_server build_client clean
 

@@ -16,29 +16,9 @@
  *------------------------------------------------------
  */
 
-#ifndef LYREBIRD_LYREBIRD_H
-#define LYREBIRD_LYREBIRD_H
+#ifndef LYREBIRD_LYREBIRD_CLIENT_H
+#define LYREBIRD_LYREBIRD_CLIENT_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
-#include <unistd.h>
-#include <ifaddrs.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <fcntl.h>
-
-#define CLEAN_TO_TXT 0
-#define CLEAN_TO_TIME 1
-#define CLEAN_TO_IFADDR 2
-#define CLEAN_TO_SOCKET 3
-#define CLEAN_ALL 4
-
-/* Used to get current time in specify format */
-void get_time(void);
-
-/* Used to free memory and close file pointer before program exit */
-void clean_up(int step);
+#include "cli_func.h"
 
 #endif
