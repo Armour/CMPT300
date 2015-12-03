@@ -56,6 +56,11 @@ char recv_mark[MARK_MAXLENGTH];                 /* A buffer that used to store r
 char read_mark[MARK_MAXLENGTH];                 /* A buffer that used to store read message */
 char write_mark[MARK_MAXLENGTH];                /* A buffer that used to store write message */
 
+char fcfs_file_buf[FILE_MAXLENGTH];             /* The buffer that used to store file name that read from pipe */
+char fcfs_err_buf[ERROR_MAXLENGTH];             /* The buffer that used to store error message that read from pipe */
+char fcfs_pid_buf[PID_MAXLENGTH];               /* The buffer that used to store pid number that read from pipe */
+
+
 /*
  * Function: Main
  * -------------------

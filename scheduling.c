@@ -22,10 +22,6 @@
 #include "scheduling.h"
 #include "memwatch.h"
 
-char fcfs_file_buf[FILE_MAXLENGTH];                 /* The buffer that used to store file name that read from pipe */
-char fcfs_err_buf[ERROR_MAXLENGTH];                 /* The buffer that used to store error message that read from pipe */
-char fcfs_pid_buf[PID_MAXLENGTH];                   /* The buffer that used to store pid number that read from pipe */
-
 /*
  * Function: Fcfs
  * -------------------
@@ -49,7 +45,6 @@ int fcfs(void) {
         return FCFS_EXIT;
     }
     if (FD_ISSET(sockfd, &rfds)) {                          /* If get message from server */
-        //printf("Recv server msg!\n");
         recv_socket_msg(sockfd, recv_mark);                 /* Read message from server side */
         if (strcmp(recv_mark, CLIENT_EXIT_MSG) == 0) {
             printf("Server ask to quit!\n");

@@ -27,6 +27,10 @@
 #include "lyre_macro.h"
 #include "cli_func.h"
 
+extern char fcfs_file_buf[FILE_MAXLENGTH];             /* The buffer that used to store file name that read from pipe */
+extern char fcfs_err_buf[ERROR_MAXLENGTH];             /* The buffer that used to store error message that read from pipe */
+extern char fcfs_pid_buf[PID_MAXLENGTH];               /* The buffer that used to store pid number that read from pipe */
+
 /* First come first serve scheduling algorithm */
 int fcfs(void);
 

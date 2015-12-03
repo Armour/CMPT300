@@ -61,6 +61,10 @@ extern char recv_mark[MARK_MAXLENGTH];                  /* A buffer that used to
 extern char read_mark[MARK_MAXLENGTH];                  /* A buffer that used to store read message */
 extern char write_mark[MARK_MAXLENGTH];                 /* A buffer that used to store write message */
 
+extern char fcfs_file_buf[FILE_MAXLENGTH];             /* The buffer that used to store file name that read from pipe */
+extern char fcfs_err_buf[ERROR_MAXLENGTH];             /* The buffer that used to store error message that read from pipe */
+extern char fcfs_pid_buf[PID_MAXLENGTH];               /* The buffer that used to store pid number that read from pipe */
+
 
 /* Used to get current time in specify format */
 void get_time(void);

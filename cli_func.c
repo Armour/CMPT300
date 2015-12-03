@@ -102,7 +102,7 @@ void write_pipe_msg(int pipe, char *msg) {
     write(pipe, &msg_len, sizeof(uint32_t));                    /* Write the message length first */
     write(pipe, msg, ntohl(msg_len));                           /* Write the message content */
     //printf("Write msg len: !%u!\n", ntohl(msg_len));
-    printf("Write msg content: !%s!\n", msg);
+    //printf("Write msg content: !%s!\n", msg);
 }
 
 /*
@@ -124,7 +124,7 @@ int read_pipe_msg(int pipe, char *msg) {
     if ((ret = read(pipe, msg, ntohl(msg_len))) == 0) return 0;                 /* Read the message content */
     msg[ntohl(msg_len)] = '\0';
     //printf("Read msg len: !%u!\n", ntohl(msg_len));
-    printf("Read msg content: !%s!\n", msg);
+    //printf("Read msg content: !%s!\n", msg);
     return ret;
 }
 
@@ -518,7 +518,32 @@ void close_ctp_pipe_with_pid(int pid) {
 void read_rmng_msg(void) {
     int i;
     for (i = 0; i < process_number_limit; i++) {          /* Read all remaining message in child processes */
-        while (read_pipe_msg(child_to_parent[i * 2], read_mark));
+        while (read_pipe_msg(child_to_parent[i * 2], read_mark)) {
+            if (strcmp(read_mark, CHILD_PROCESS_INIT) == 0) {           /* If messge is init message */
+                strcpy(send_mark, DISPATCH_MSG);
+                send_socket_msg(sockfd, send_mark);
+            } else if (strcmp(read_mark, CHILD_PROCESS_SUCCESS) == 0) {         /* If message is success messge */
+                is_free[i] = TRUE;
+                read_pipe_msg(child_to_parent[i * 2], fcfs_file_buf);           /* Read successful decrypted file name */
+                strcpy(send_mark, SUCCESS_MSG);
+                sprintf(fcfs_pid_buf, "%d", pid_array[i]);
+                send_socket_msg(sockfd, send_mark);                             /* Send message to server side about this successful decryption */
+                send_socket_msg(sockfd, fcfs_file_buf);
+                send_socket_msg(sockfd, fcfs_pid_buf);
+            } else if (strcmp(read_mark, CHILD_PROCESS_WARNING) == 0 || strcmp(read_mark, CHILD_PROCESS_FAILURE) == 0) {        /* If meet warning or failure */
+                if (strcmp(read_mark, CHILD_PROCESS_WARNING) == 0) {            /* If message is warning message */
+                    is_free[i] = TRUE;                                          /* Set this child process state to FREE */
+                }
+                read_pipe_msg(child_to_parent[i * 2], fcfs_err_buf);            /* Read error messge from child process */
+                strcpy(send_mark, FAILURE_MSG);
+                send_socket_msg(sockfd, send_mark);                             /* Send error message to server side */
+                send_socket_msg(sockfd, fcfs_err_buf);
+            } else {                                                    /* If message can not be identify */
+                get_time();
+                printf("[%s] (Process ID #%d) ERROR: Wrong message has been read from pipe after select.\n", out_time, getpid());
+                main_flag = EXIT_FAILURE;
+            }
+        }
     }
 }
 
