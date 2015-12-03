@@ -61,8 +61,6 @@ void send_socket_msg(int socket, char *msg) {
     msg_len = htonl(strlen(msg));
     send(socket, &msg_len, sizeof(uint32_t), 0);                /* Send the message length first */
     send(socket, msg, ntohl(msg_len), 0);                       /* Send the message content */
-    //printf("Send msg len: !%u!\n", ntohl(msg_len));
-    //printf("Send msg content: !%s!\n", msg);
 }
 
 /*
@@ -82,8 +80,6 @@ void recv_socket_msg(int socket, char *msg) {
     recv(socket, &msg_len, sizeof(uint32_t), 0);                /* Recv the message length first */
     recv(socket, msg, ntohl(msg_len), 0);                       /* Recv the message content */
     msg[ntohl(msg_len)] = '\0';
-    //printf("Recv msg len: !%u!\n", ntohl(msg_len));
-    //printf("Recv msg content: !%s!\n", msg);
 }
 
 /*
@@ -103,8 +99,6 @@ void write_pipe_msg(int pipe, char *msg) {
     msg_len = htonl(strlen(msg));
     write(pipe, &msg_len, sizeof(uint32_t));                    /* Write the message length first */
     write(pipe, msg, ntohl(msg_len));                           /* Write the message content */
-    //printf("Write msg len: !%u!\n", ntohl(msg_len));
-    //printf("Write msg content: !%s!\n", msg);
 }
 
 /*
@@ -125,8 +119,6 @@ int read_pipe_msg(int pipe, char *msg) {
     if ((ret = read(pipe, &msg_len, sizeof(uint32_t))) == 0) return 0;          /* Read the message length first */
     if ((ret = read(pipe, msg, ntohl(msg_len))) == 0) return 0;                 /* Read the message content */
     msg[ntohl(msg_len)] = '\0';
-    //printf("Read msg len: !%u!\n", ntohl(msg_len));
-    //printf("Read msg content: !%s!\n", msg);
     return ret;
 }
 
@@ -144,9 +136,9 @@ int read_pipe_msg(int pipe, char *msg) {
  */
 
 void init(void) {
-    //signal(SIGINT, signal_handler);
-    //signal(SIGQUIT, signal_handler);
-    //signal(SIGHUP, signal_handler);
+    signal(SIGINT, signal_handler);
+    signal(SIGQUIT, signal_handler);
+    signal(SIGHUP, signal_handler);
     addr_len = sizeof(struct sockaddr_in);
     out_time = (char *)malloc(sizeof(char) * TIME_MAXLENGTH);
     enc_txt = (char *)malloc(sizeof(char) * FILE_MAXLENGTH);
@@ -613,13 +605,15 @@ void clean_up(int step) {
     if (step >= CLEAN_TO_TIME){
         free(enc_txt);
         free(dec_txt);
+        free(out_time);
+    }
+    if (step >= CLEAN_TO_SOCKET) {
         free(parent_to_child);
         free(child_to_parent);
         free(pid_array);
         free(is_free);
+        close(sockfd);
     }
-    if (step >= CLEAN_TO_TIME) free(out_time);
-    if (step >= CLEAN_TO_SOCKET) close(sockfd);
 }
 
 /*
@@ -637,13 +631,13 @@ void clean_up(int step) {
 void signal_handler(int sig_num) {
     switch (sig_num) {
         case SIGINT:
-            printf("Can not interrupt (signal #%d) this process, because this is a VERY IMPORTANT task!\n", sig_num);
+            printf("Please do not interrupt (signal #%d) this process, because this is a VERY IMPORTANT task! :D\n", sig_num);
             break;
         case SIGQUIT:
-            printf("Can not quit (signal #%d) this process, because this is a VERY IMPORTANT task!\n", sig_num);
+            printf("Please do not quit (signal #%d) this process, because this is a VERY IMPORTANT task! :D\n", sig_num);
             break;
         case SIGHUP:
-            printf("Can not exit (signal #%d) this process, because this is a VERY IMPORTANT task!\n", sig_num);
+            printf("Please do not exit (signal #%d) this process, because this is a VERY IMPORTANT task! :D\n", sig_num);
             break;
     }
 }

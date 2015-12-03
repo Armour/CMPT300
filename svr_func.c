@@ -61,8 +61,6 @@ void send_socket_msg(int socket, char *msg) {
     msg_len = htonl(strlen(msg));
     send(socket, &msg_len, sizeof(uint32_t), 0);            /* Send message length first */
     send(socket, msg, ntohl(msg_len), 0);                   /* Send message content */
-    //printf("Send msg len: !%u!\n", ntohl(msg_len));
-    //printf("Send msg content: !%s!\n", msg);
 }
 
 /*
@@ -82,8 +80,6 @@ void recv_socket_msg(int socket, char *msg) {
     recv(socket, &msg_len, sizeof(uint32_t), 0);            /* Recv message length first */
     recv(socket, msg, ntohl(msg_len), 0);                   /* Recv message content first */
     msg[ntohl(msg_len)] = '\0';
-    //printf("Recv msg len: !%u!\n", ntohl(msg_len));
-    //printf("Recv msg content: !%s!\n", msg);
 }
 
 /*
