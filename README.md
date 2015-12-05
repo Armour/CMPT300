@@ -1,16 +1,10 @@
 # Lyrebird
 
+[![Build Status](https://travis-ci.org/Armour/CMPT300-Assignment.svg)](https://travis-ci.org/Armour/CMPT300-Assignment)
+
 ---
 
-![](https://cloud.githubusercontent.com/assets/5276065/11606033/66bf0d02-9ac6-11e5-8bac-a38612b32e72.png)
-
-## Author Information
-*  Name            : Chong Guo
-*  Student ID      : 301295753
-*  SFU username    : armourg
-*  Lecture section : D1
-*  Instructor      : Brain G.Booth
-*  TA              : Scott Kristjanson
+<img src="https://cloud.githubusercontent.com/assets/5276065/11606033/66bf0d02-9ac6-11e5-8bac-a38612b32e72.png" alt= "lyrebird" height="150" weight="150">
 
 ## Description
 
@@ -59,10 +53,18 @@ Same as before, each tweet’s decryption follow four steps below:
 * Parent process wait until all his child processes finished before exit.
 * Server wait until all the clients quit before exit.
 * Close all pipes that do not need in each processes.
-* Empty data and largest data tested (used data set from assignment #2).
+* Empty data and largest data tested.
 
 ## Reference list
 
 [Beej's Guide to Network Programming](http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html)
 
 [Linux man page](http://linux.die.net/man)
+
+## Author Information
+*  Name            : Chong Guo
+*  Student ID      : 301295753
+*  SFU username    : armourg
+*  Lecture section : D1
+*  Instructor      : Brain G.Booth
+*  TA              : Scott Kristjanson
