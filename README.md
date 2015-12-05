@@ -20,7 +20,7 @@ Same as before, each tweet’s decryption follow four steps below:
 
 4. Get the final decrypted text by use the inverse function of Step 2.
 
-(More Details can be found in [Assignment 4 - A Distributed Flock of Lyrebirds](https://courses.cs.sfu.ca/2015fa-cmpt-300-d1/pages/AssignmentFour/view))
+(More Details can be found in [Assignment 4 Outline - A Distributed Flock of Lyrebirds](https://github.com/Armour/CMPT300-Assignment/files/51661/Assignment_4_Outline.pdf))
 
 ## Project Structure
 
