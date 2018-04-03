@@ -8,7 +8,7 @@
 
 ## Description
 
-This program aims to **decrypt large numbers of encrypted tweets**. To speed up and **take advantages of multiple machines**, it uses a distributed system with *client-server* architecture. Server will assign tasks to the clients and store messages to log file; client will decrypt each task assigned by the server and send result message back. To **take advantages of multiple CPU cores**, in each client side, it also uses fork function to spread the decryption tasks across multiple processes and use pipes to pass messages between the parent process and the child processes (using "first come first serve" scheduling algorithm).
+This program aims to **decrypt large numbers of encrypted tweets**. To **take advantages of multiple machines**, it uses a distributed system with *client-server* architecture. Server will assign tasks to the clients and store messages to the log file; client will decrypt each task assigned and send result message back. To **take advantages of multiple CPU cores**, each client uses fork function to spread the decryption tasks across multiple processes and uses pipes to communicate between the parent and child processes using "first come first serve" scheduling algorithm.
 
 Same as before, each tweet’s decryption follows four steps:
 
@@ -29,36 +29,36 @@ Same as before, each tweet’s decryption follows four steps:
   2. keep receiving messages from clients and write them to the log file;
   3. wait for all clients finish their tasks;
   4. exit.
-* **"lyrebird.client.c"**   : contains the main loop function for client side which 
-  1. use fork function to create child processes to do the decryption for each tweet file;
-  2. keep communicating with theserver side.
+* **"lyrebird.client.c"**   : contains the main loop function for the client side which :
+  1. use fork function to create child processes to decrypt each tweet file;
+  2. keep communicating with the server side.
 * **"svr_func.c"**   : contains many functions that used in the server side
 * **"cli_func.c"**   : contains many functions that used in the client side
 * **"scheduling.c"** : contains one function, which is 'fcfs' scheduling algorithm that is used to assign tasks to the child processes in the parent process.
 * **"decrypt.c"**    : contains a decryption function, which goes through 4 steps. In each step it calls some functions in dec_func.c to handle decryption.
-* **"dec_func.c"**   : contains many functions that are used to decrypt the tweets, like removing extra characters, transforming characters and integers.
+* **"dec_func.c"**   : contains many functions that are used to decrypt the tweets, like removing extra characters, transforming between characters and integers.
 * **"line_io.c"**    : contains two functions, which input one line data from file and output one line data to file
 * **"memwatch.c"**   : mainly used for un-freed memory detection, overflow and underflow to memory buffers.
 
 ## How to Use
 
-1. Unzip all the files into one folder and cd into that folder.
-2. Run command `make`, you will see all the source file be compiled and linked.
+1. Unzip all the files into one folder and cd into it.
+2. Run command `make`, having all the source file compiled and linked.
 3. Run command `./lyrebird.server <config_file> <log_file>` to set up a server.
    * (e.g. "./lyrebird.server config_file.txt log_file.txt")
-4. Run command `./lyrebird.client <ip address> <port number>` to set up a client and connect it to the server (you can have multiple clients).
+4. Run command `./lyrebird.client <ip address> <port number>` to set up a client and connect it to the server (multiple clients supported).
    * (e.g. "./lyrebird.client 207.23.199.37 58295")
 5. Run command `make clean` to remove all intermediate files.
 
 ## Robustness
 
 * Check the number of command line parameters.
-* Check whether the input and output file exist or not.
+* Check the existence of input and output file.
 * Dynamically manage memory and gaurantee to free all when program finishs (also check any failure of malloc function).
-* Checked IP address and port number.
-* Parent process waits until all the child processes finish before exit.
-* Server waits until all the clients quit before exit.
-* Close all pipes that do not need in each process.
+* Check IP address and port number.
+* Parent process does not exit until all the child processes finish.
+* Server does not exit until all the clients quit.
+* Close all unnecessary pipes in each process.
 * Test empty data and largest data.
 
 ## Reference List
