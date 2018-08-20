@@ -63,6 +63,10 @@ Same as before, each tweet’s decryption follows four steps:
 
 [Linux man page](http://linux.die.net/man)
 
+## Plagiarism
+
+This repo is intend as a reference for your personal project, **DO NOT copy code in this repo for your SFU CMPT413 assignment!! Plagiarism is a serious academic offense, which applies as much to code as it does to essays and exams.**
+
 ## Author Information
 *  Name            : Chong Guo
 *  Student ID      : 301295753
