@@ -1,9 +1,5 @@
 # Lyrebird
 
-[![Build Status](https://travis-ci.org/Armour/CMPT300-Assignment.svg)](https://travis-ci.org/Armour/CMPT300-Assignment)
-
----
-
 <img src="https://cloud.githubusercontent.com/assets/5276065/11606033/66bf0d02-9ac6-11e5-8bac-a38612b32e72.png" alt= "lyrebird" height="150" weight="150">
 
 ## Description
