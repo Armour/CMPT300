@@ -50,14 +50,14 @@ Each tweet’s decryption follows four steps:
 
 * Check the number of command line parameters.
 * Check the existence of input and output file.
-* Dynamically manage memory and gaurantee to free all when program finishs (also check any failure of malloc function).
+* Dynamically manage memory and guarantee to free all when program finishes (also check any failure of malloc function).
 * Check IP address and port number.
 * Parent process does not exit until all the child processes terminate.
 * Server does not exit until all the clients quit.
 * Close all unnecessary pipes in each process.
 * Test empty data and largest data.
 
-## Reference List
+## References
 
 [Beej's Guide to Network Programming](http://beej.us/guide/bgnet/output/html/singlepage/bgnet.html)
 
@@ -66,11 +66,3 @@ Each tweet’s decryption follows four steps:
 ## Plagiarism
 
 This repo is intend as a reference for your personal project, **DO NOT copy code in this repo for your SFU CMPT413 assignment!! Plagiarism is a serious academic offense, which applies as much to code as it does to essays and exams.**
-
-## Author Information
-*  Name            : Chong Guo
-*  Student ID      : 301295753
-*  SFU username    : armourg
-*  Lecture section : D1
-*  Instructor      : Brain G.Booth
-*  TA              : Scott Kristjanson
